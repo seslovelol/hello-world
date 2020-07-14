@@ -196,40 +196,178 @@ def get_order():
 def check_template():
 
 
-def read_file():
+def read_file(filename, logger, exclude=False):
+    """
+        Read a file and return the file's content.
+    """
+    if os.path.isfile(filename):
+        try:
+            file_reader = open(filename, 'r')
+            content = file_reader.read().splitlines()
+        except:
+            file_reader = open(filename, 'r', encoding='utf-8-sig')
+            content = file_reader.read().splitlines()
+        finally:
+            if exclude:
+                # Remove the lines with '#' or the empty lines from content.
+                [content.remove(t) for t in list(content) if t.startwith('#') or t == '']
+                new_content = []
+                for c in content:
+                    new_content.append(c.strip())
+                content = new_content
+            file_reader.close()
+    else:
+        logger.error('No such file: {}'.format(filename))
+        sys.exit(1)
 
 
 def diff_file():
 
 
-def check_md5():
+def check_md5(file_name, logger):
+    """
+        Check file's md5.
+    """
+    local_md5 = get_md5(file_name)
+    md5_file = '.'.join([file_name, 'md5'])
+    remote_md5 = read_file(md5_file, logger, exclude=True)[0]
+    logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
+    logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
+    if local_md5 == remote_md5:
+        logger.info('')
+        logger.info('MD5 codes are equal , data integrity.')
+    else:
+        logger.error('MD5 codes are different, data loss.')
+        sys.exit(1)
 
 
-def get_md5():
+def get_md5(file_name):
+    """
+        Get md5 of a file.
+    """
+    m = hashlib.md5()
+    with open(file_name, 'rb') as f:
+        while True:
+            data = f.read(4096)
+            if not data:
+                break
+            m.update(data)
+    return m.hexdigest()
 
 
-def get_suffix():
+def get_suffix(file_name, logger, package=True):
+    """
+        Get suffix of a filename.
+        Args: tar | zip | other
+    """
+    file_suffix = file_name.split('.')[-1]
+    if package:
+        if file_suffix in ('tar', 'zip'):
+            return file_suffix
+        else:
+            logger.error('{} is not a package.'.format(file_name))
+            sys.exit(1)
+    else:
+        return file_suffix
 
 
-def read_tar():
+def read_tar(package_name, logger):
+    """
+        Open a tarfile for reading.
+    """
+    if tarfile.is_tarfile(package_name):
+        try:
+            tar_file = tarfile.open(package_name, 'r')
+            name_list = tar_file.getnames()
+            return tar_file, name_list
+        except:
+            logger.error('Read package {} failed.'.format(package_name))
+            sys.exit(1)
+    else:
+        logger.error('{} is not a tar file.'.format(package_name))
+        sys.exit(1)
 
 
-def read_zip():
+def read_zip(package_name, logger):
+    """
+        Open a zipfile for reading.
+    """
+    if zipfile.is_zipfile(package_name):
+        try:
+            zip_file = zipfile.ZipFile(package_name, 'r')
+            name_list = zip_file.namelist()
+            return zip_file, name_list
+        except:
+            logger.error('Read package {} failed.'.format(package_name))
+            sys.exit(1)
+    else:
+        logger.error('{} is not a zip file.'.format(package_name))
+        sys.exit(1)
 
 
-def write_tar():
+def write_tar(package_name, logger):
+    """
+        Open a tar file for writing.
+    """
+    try:
+        tar_file = tarfile.open(package_name, 'w')
+        return tar_file
+    except:
+        logger.error('Write package {} failed.'.format(package_name))
+        sys.exit(1)
 
 
-def write_zip():
+def write_zip(package_name, logger):
+    """
+        Open a zip file for writing.
+    """
+    try:
+        zip_file = zipfile.ZipFile(package_name, 'w')
+        return zip_file
+    except:
+        logger.error('Write package {} failed.'.format(package_name))
+        sys.exit(1)
 
 
-def get_namelist():
+def get_namelist(local, package_name, logger):
+    """
+        Get package's namelist.
+    """
+    suffix = get_suffix(package_name, logger)
+    package_path = os.path.join(local, package_name)
+    package, namelist = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
+    package.close()
+    return namelist
 
 
-def get_size():
+def get_size(size, is_disk=True):
+    """
+        Get size of a file.
+    """
+    formats = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    unit = 1024.0 if is_disk else 1000.0
+    if not (isinstance(size, float) or isinstance(size, int)):
+        raise TypeError('Not a number.')
+    if size < 0:
+        raise ValueError('Less than 0.')
+    for i in formats:
+        if size < unit:
+            return '{0:.1f} {1}'.format(size, i)
+        else:
+            size /= unit
 
 
-def get_stat():
+def get_stat(file_list, logger):
+    """
+        Get stat of a file.
+    """
+    if file_list:
+        for file_name in file_list:
+            file_info = os.stat(file_name)
+            file_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(file_info.st_atime))
+            file_size = get_size(file_info.st_size)
+            logger.info('{}    {}    {}'.format(filename, file_time, file_size))
+        file_list.clear()
 
 
 def extract_package():
