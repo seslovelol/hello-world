@@ -9,10 +9,10 @@ __date__    = 'Jul.13,2020'
 import logging
 import logging.handlers
 import os
-from os import chdir, system
 import sys
-from sys import argv
+from sys import modules
 import time
+import locale
 import tarfile
 import zipfile
 import ftplib
@@ -50,7 +50,7 @@ def logger():
         except:
             print('Warning: Create log directory failed.')
     handler2 = logging.handlers.TimedRotatingFileHandler(os.path.join(log_path, 'run.log'), when='W0', interval=1, backupCount=0)
-    handler2.setFormatter("%(asctime)s" - "%(levelname)s" - "%(message)s"))
+    handler2.setFormatter("%(asctime)s" - "%(levelname)s" - "%(message)s")
     logger.addHandler(handler2)
     return logger
 
@@ -61,10 +61,10 @@ def check_arglen(min, max, logger):
     """
     length = len(sys.argv) - 1
     if length < min:
-        logger.error('')
+        logger.error('too few arguments.')
         sys.exit(1)
     elif length > max:
-        logger.error('')
+        logger.error('too much arguments.')
         sys.exit(1)
     else:
         return length
@@ -78,7 +78,7 @@ def get_systeminfo(logger):
     try:
         system_info = platform.system()
     except:
-        logger.error('')
+        logger.error('Can not get system info.')
         sys.exit(1)
     else:
         return system_info
@@ -107,7 +107,7 @@ def change_path(path, logger):
     """
     try:
         os.chdir(path)
-        logger.debug('Change to directory: {}'.format(path))
+        logger.debug('Change to directory: {} successfully.'.format(path))
     except:
         logger.error('Change to directory: {} failed.'.format(path))
         sys.exit(1)
@@ -156,103 +156,6 @@ def remove_path(path, logger):
         logger.debug('Remove directory: {} successfully.'.format(path))
     else:
         logger.debug('No such directory: {} to remove.'.format(path))
-
-
-def check_ipaddr(ipaddr, logger):
-    """
-        Check the current device's ipaddr.
-        Exit if it is not right.
-    """
-    local_ipaddr = socket.gethostbyname_ex(socket.gethostname())[2]
-    if ipaddr in local_ipaddr:
-        logger.debug('Current ip address is '.format(ipaddr))
-    else:
-        logger.error('Ip address error.')
-        sys.exit(1)
-
-
-def check_package(local, package, logger):
-    """
-        Check package.
-        Exit if it does not exist.
-    """
-    package_path = os.path.join(local, package)
-    if os.path.exists(package_path):
-        logger.debug('Find package {} in local directory {}'.format(package, local))
-    else:
-        logger.error('No package {} in local directory {}'.format(package, local))
-        sys.exit(1)
-
-
-def check_module():
-
-
-def check_order():
-
-
-def get_order():
-
-
-def check_template():
-
-
-def read_file(filename, logger, exclude=False):
-    """
-        Read a file and return the file's content.
-    """
-    if os.path.isfile(filename):
-        try:
-            file_reader = open(filename, 'r')
-            content = file_reader.read().splitlines()
-        except:
-            file_reader = open(filename, 'r', encoding='utf-8-sig')
-            content = file_reader.read().splitlines()
-        finally:
-            if exclude:
-                # Remove the lines with '#' or the empty lines from content.
-                [content.remove(t) for t in list(content) if t.startwith('#') or t == '']
-                new_content = []
-                for c in content:
-                    new_content.append(c.strip())
-                content = new_content
-            file_reader.close()
-    else:
-        logger.error('No such file: {}'.format(filename))
-        sys.exit(1)
-
-
-def diff_file():
-
-
-def check_md5(file_name, logger):
-    """
-        Check file's md5.
-    """
-    local_md5 = get_md5(file_name)
-    md5_file = '.'.join([file_name, 'md5'])
-    remote_md5 = read_file(md5_file, logger, exclude=True)[0]
-    logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
-    logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
-    if local_md5 == remote_md5:
-        logger.info('')
-        logger.info('MD5 codes are equal , data integrity.')
-    else:
-        logger.error('MD5 codes are different, data loss.')
-        sys.exit(1)
-
-
-def get_md5(file_name):
-    """
-        Get md5 of a file.
-    """
-    m = hashlib.md5()
-    with open(file_name, 'rb') as f:
-        while True:
-            data = f.read(4096)
-            if not data:
-                break
-            m.update(data)
-    return m.hexdigest()
 
 
 def get_suffix(file_name, logger, package=True):
@@ -335,9 +238,9 @@ def get_namelist(local, package_name, logger):
     """
     suffix = get_suffix(package_name, logger)
     package_path = os.path.join(local, package_name)
-    package, namelist = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
+    package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
     package.close()
-    return namelist
+    return name_list
 
 
 def get_size(size, is_disk=True):
@@ -366,14 +269,196 @@ def get_stat(file_list, logger):
             file_info = os.stat(file_name)
             file_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(file_info.st_atime))
             file_size = get_size(file_info.st_size)
-            logger.info('{}    {}    {}'.format(filename, file_time, file_size))
+            logger.info('{}    {}    {}'.format(file_name, file_time, file_size))
         file_list.clear()
 
 
-def extract_package():
+def check_md5(file_name, logger):
+    """
+        Check file's md5.
+    """
+    local_md5 = get_md5(file_name)
+    md5_file = '.'.join([file_name, 'md5'])
+    remote_md5 = read_file(md5_file, logger, exclude=True)[0]
+    logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
+    logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
+    if local_md5 == remote_md5:
+        logger.info('')
+        logger.info('MD5 codes are equal , data integrity.')
+    else:
+        logger.error('MD5 codes are different, data loss.')
+        sys.exit(1)
 
 
-def remove_module():
+def get_md5(file_name):
+    """
+        Get md5 of a file.
+    """
+    m = hashlib.md5()
+    with open(file_name, 'rb') as f:
+        while True:
+            data = f.read(4096)
+            if not data:
+                break
+            m.update(data)
+    return m.hexdigest()
+
+
+def read_file(filename, logger, exclude=False):
+    """
+        Read a file and return the file's content.
+    """
+    if os.path.isfile(filename):
+        try:
+            file_reader = open(filename, 'r')
+            content = file_reader.read().splitlines()
+        except:
+            file_reader = open(filename, 'r', encoding='utf-8-sig')
+            content = file_reader.read().splitlines()
+        finally:
+            if exclude:
+                # Remove the lines with '#' or the empty lines from content.
+                [content.remove(t) for t in list(content) if t.startwith('#') or t == '']
+                new_content = []
+                for c in content:
+                    new_content.append(c.strip())
+                content = new_content
+            file_reader.close()
+    else:
+        logger.error('No such file: {}'.format(filename))
+        sys.exit(1)
+
+
+def extract_package(local, package_name, module, logger):
+    """
+        Extract files from package.
+    """
+    suffix = get_suffix(package_name, logger)
+    package_path = os.path.join(local, package_name)
+    package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
+    change_path(local, logger)
+    remove_path(os.path.join(local, module), logger)
+    if suffix == 'tar':
+        try:
+            for name in name_list:
+                if module in name:
+                    logger.debug('Extracting: {}'.format(name))
+                    package.extract(name)
+            package.close()
+            logger.debug('Extract {} done'.format(module))
+        except:
+            logger.error('Extract {} from package {} failed.'.format(module, package_name))
+            package.close()
+            sys.exit(1)
+    else:
+        try:
+            for name in name_list:
+                new_name = name.encode('cp437').decode(locale.getpreferredencoding())
+                if module in new_name:
+                    logger.debug('Extracting: {}'.format(new_name))
+                    package.extract(name, new_name)
+            package.close()
+            logger.debug('Extract {} done.'.format(module))
+        except:
+            logger.error('Extract {} from package {} failed.'.format(module, package_name))
+            package.close()
+            sys.exit(1)
+
+
+def check_ipaddr(ipaddr, logger):
+    """
+        Check the current device's ipaddr.
+        Exit if it is not right.
+    """
+    local_ipaddr = socket.gethostbyname_ex(socket.gethostname())[2]
+    if ipaddr in local_ipaddr:
+        logger.debug('Current ip address is '.format(ipaddr))
+    else:
+        logger.error('Ip address error.')
+        sys.exit(1)
+
+
+def check_package(local, package, logger):
+    """
+        Check package.
+        Exit if it does not exist.
+    """
+    package_path = os.path.join(local, package)
+    if os.path.exists(package_path):
+        logger.debug('Find package {} in local directory {}'.format(package, local))
+    else:
+        logger.error('No package {} in local directory {}'.format(package, local))
+        sys.exit(1)
+
+
+def check_module(local, package, module, logger, extract=True):
+    """
+        Check module from package.
+        Exit if it does not exist.
+    """
+    name_list = get_namelist(local, package, logger)
+    temp = '/'.join([package.split('.')[0], module])
+    module_path = temp if get_suffix(package, logger) else temp + '/'
+    if module_path in name_list:
+        logger.debug('Find module {} in package {}'.format(module, package))
+    else:
+        logger.error('No module {} in package {}. Check your package.'.format(module, package))
+    if extract:
+        extract_package(local, package, module_path, logger)
+
+
+def remove_module(local, package, module, logger):
+    """
+        Clean up the module directory.
+    """
+    path = '/'.join([package.split('.')[0], module])
+    change_path(local, logger)
+    remove_path(path, logger)
+
+
+def check_order(local, package, module, logger, extract=True):
+    """
+        Check order.txt from package/module.
+        Extract it from package if it exists.
+    """
+    name_list = get_namelist(local, package, logger)
+    order_path = '/'.join([package.split('.')[0], module, order_txt])
+    if order_path in name_list:
+        logger.debug('Find order.txt in package.')
+    else:
+        logger.error('No order.txt in package. Check your package.')
+        sys.exit(1)
+    if extract:
+        extract_package(local, package, order_path, logger)
+    return os.path.join(local, order_path)
+
+
+def get_order(order, logger):
+    """
+        Get content of `order.txt`.
+    """
+    content = read_file(order, logger, exclude=True)
+    return content
+
+
+def check_template(local, package, logger, extract=True):
+    """
+        Check template from package.
+        Extract it from package if it exists.
+    """
+    name_list = get_namelist(local, package, logger)
+    template_path = '/'.join([package.split('.')[0], template_name])
+    if template_path in name_list:
+        logger.info('Find template file in package.')
+    else:
+        logger.error('No template file in package. Check your package.')
+        sys.exit(1)
+    if extract:
+        extract_package(local, package, template_path, logger)
+    return os.path.join(local, template_path)
+
+
+def diff_file():
 
 
 def get_ftp():
@@ -409,8 +494,25 @@ def execute_script():
 def sub_process():
 
 
-def break_process():
+def break_process(local, package, module, logger, clean_up=True):
+    """
+        Clean up module directory and break process.
+        Just exit process and do not remove module directory if clean_up is False.
+        Set clean_up `False` if it is a database update.
+    """
+    if clean_up:
+        remove_module(local, package, module, logger)
+    print(1)
+    sys.exit(1)
 
 
-def exit_process():
-
+def exit_process(local, package, module, logger, clean_up=True):
+    """
+        Clean up module directory and exit process.
+        Just exit process and do not remove module directory if clean_up is False.
+        Set clean_up `False` if it is a database update.
+    """
+    if clean_up:
+        remove_module(local, package, module, logger)
+    print(0)
+    sys.exit(0)
