@@ -10,13 +10,13 @@ import logging
 import logging.handlers
 import os
 import sys
-from sys import modules
 import time
 import locale
 import tarfile
 import zipfile
 import ftplib
 import hashlib
+import difflib
 import shutil
 import socket
 import random
@@ -84,19 +84,19 @@ def get_systeminfo(logger):
         return system_info
 
 
-def check_file(filename, logger):
+def check_file(file_name, logger):
     """
         Check file.
         Exit if it does not exists.
     """
     result = True
     for _ in range(3):
-        if os.path.isfile(filename):
-            logger.debug('Find file {}'.format(filename))
+        if os.path.isfile(file_name):
+            logger.debug('Find file {}'.format(file_name))
             result = False
             break
     if result:
-        logger.error('NO such file {} in current dir {}'.format(filename, os.getcwd()))
+        logger.error('NO such file {} in current dir {}'.format(file_name, os.getcwd()))
         sys.exit(1)
 
 
@@ -304,16 +304,16 @@ def get_md5(file_name):
     return m.hexdigest()
 
 
-def read_file(filename, logger, exclude=False):
+def read_file(file_name, logger, exclude=False):
     """
         Read a file and return the file's content.
     """
-    if os.path.isfile(filename):
+    if os.path.isfile(file_name):
         try:
-            file_reader = open(filename, 'r')
+            file_reader = open(file_name, 'r')
             content = file_reader.read().splitlines()
         except:
-            file_reader = open(filename, 'r', encoding='utf-8-sig')
+            file_reader = open(file_name, 'r', encoding='utf-8-sig')
             content = file_reader.read().splitlines()
         finally:
             if exclude:
@@ -325,7 +325,7 @@ def read_file(filename, logger, exclude=False):
                 content = new_content
             file_reader.close()
     else:
-        logger.error('No such file: {}'.format(filename))
+        logger.error('No such file: {}'.format(file_name))
         sys.exit(1)
 
 
@@ -458,40 +458,175 @@ def check_template(local, package, logger, extract=True):
     return os.path.join(local, template_path)
 
 
-def diff_file():
+def diff_file(file1, file2, output, logger):
+    """
+        Diff two files.
+        Output: html.
+    """
+    text1_lines = read_file(file1, logger)
+    text2_lines = read_file(file2, logger)
+    diff = difflib.HtmlDiff()
+    result = diff.make_file(text1_lines, text2_lines)
+    with open(output, 'w') as file_writer:
+        file_writer.writelines(result)
+    logger.debug('Diff files done.')
 
 
-def get_ftp():
+def ftp_connect(host, port):
+    """
+        Create a ftp connection.
+    """
+    client = ftplib.FTP()
+    try:
+        client.connect(host, int(port))
+        result = True
+    except:
+        result = False
+    return client, result
 
 
-def ftp_connect():
+def get_ftp(ftpinfo, logger, message=False):
+    """
+        Login ftp with the ftp connection.
+        Return a ftp client for downloading or uploading files.
+    """
+    host, port, user, passwd, remote_dir = ftpinfo
+    if message:
+        logger.info('username = {}'.format(user))
+        logger.info('password = ******')
+        logger.info('host = {}'.format(host))
+        logger.info('port = {}'.format(port))
+    i = 0 
+    while i < 10:
+        client, result = ftp_connect(host, port)
+        if result:
+            break
+        time.sleep(random.random() + 1)
+        i += 1
+        logger.info('{} Reconnect to {}:{}'.format(host, port))
+    if not results:
+        logger.error('Connect to {}:{} failed.'.format(host, port))
+        sys.exit(1)
+    try:
+        client.login(user, passwd)
+        logger.info('Connect to {}:{} successfully.'.format(host, port))
+    except:
+        logger.error('Login to {}:{} failed.'.format(host, port))
+        sys.exit(1)
+    return client
 
 
 def ftp_cwd():
+    """
+    """
 
 
 def ftp_upload():
+    """
+    """
 
 
 def ftp_download():
+    """
+    """
 
 
 def upload_log():
+    """
+    """
 
 
-def unicode_gbk():
+def unicode_gbk(file_name):
+    """
+        Transfer charset from unicode to GBK.
+    """
+    file_reader = open(file_name, 'rb')
+    try:
+        content = file_reader.read().decode('utf-8').encode('gbk')
+    except:
+        file_reader.close()
+    else:
+        file_reader.close()
+        with open(file_name, 'wb') as file_writer:
+            file_writer.write(content)
 
 
-def add_bom():
+
+def add_bom(file_name):
+    """
+        Add BOM head to a utf-8 file.
+        Transfer charset from utf-8 to utf-8-bom.
+    """
+    BOM = b'\xef\xbb\xbf'
+    exist_bom = lambda s: False if s == BOM else True
+    file_reader = open(file_name, 'rb')
+    content = file_reader.read()
+    if exist_bom(file_reader.read(3)):
+        with open(file_name, 'wb') as file_writer:
+            file_writer.write(BOM)
+            file_writer.write(content)
+    file_reader.close()
 
 
-def remove_bom():
+def remove_bom(file_name):
+    """
+        Remove BOM head from a utf-8 file.
+        Transfer charset from utf-8-bom to utf-8.
+    """
+    BOM = b'\xef\xbb\xbf'
+    exist_bom = lambda s: True if s == BOM else False
+    file_reader = open(file_name, 'rb')
+    if exist_bom(file_reader.read(3)):
+        content = file_reader.read()
+        with open(file_name, 'wb') as file_writer:
+            file_writer.write(content)
+    file_reader.close()
 
 
-def execute_script():
+def execute_script(path, logger):
+    """
+        Execute a script.
+    """
+    script_base = os.path.basename(path)
+    script_dir = os.path.dirname(path)
+    if os.path.isdir(script_dir):
+        os.chdir(script_dir)
+    suffix = get_suffix(script_base, logger, package=False)
+    if suffix.lower() == 'bat':
+        check_file(script_base, logger)
+        remove_bom(script_base)
+        unicode_gbk(script_base)
+        returncode = sub_process(script_base, logger)
+    elif suffix.lower() == 'sh':
+        check_file(script_base, logger)
+        script = ' '.join(['sh', script_base])
+        returncode = sub_process(script, logger)
+    elif suffix.lower() == 'py':
+        check_file(script_base, logger)
+        script = ' '.join(['python', script_base])
+        returncode = sub_process(script, logger)
+    else:
+        returncode = sub_process(script_base, logger)
+    if returncode == 0:
+        logger.info('{} was executed successfully.'.format(script_base))
+    else:
+        logger.error('{} was executed failed.'.format(script_base))
+        sys.exit(1)
 
 
-def sub_process():
+def sub_process(command, logger):
+    """
+        Create a subprocess.
+        Successfull: return = 0.
+    """
+    p = subprocess.Popen('{}'.format(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    while p.poll() is True:
+        line = p.stdout.read().strip()
+        if line:
+            logger.info('Execution result: \n{}'.format(line.decode(locale.getpreferredencoding())))
+    p.wait()
+    return p.returncode
+
 
 
 def break_process(local, package, module, logger, clean_up=True):
