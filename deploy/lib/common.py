@@ -6,8 +6,6 @@ __version__ = '1.01'
 __date__    = 'Jul.13,2020'
 
 
-import logging
-import logging.handlers
 import os
 import sys
 import time
@@ -22,6 +20,8 @@ import socket
 import random
 import platform
 import subprocess
+import logging
+import logging.handlers
 
 
 current_time = time.strftime('_%Y%m%d%H%M%S', time.localtime())
@@ -516,24 +516,103 @@ def get_ftp(ftpinfo, logger, message=False):
     return client
 
 
-def ftp_cwd():
+def ftp_cwd(client, remote, logger, mkdir=False):
     """
+        Change remote directory of ftp server.
     """
+    remote_list = list(filter(None, remote.replace('\\', '/').split('/')))
+    remote_path = '/'.join([client.pwd(), '/'.join(remote_list)])
+    if mkdir:
+        remote_name = ''
+        for name in remote_path.split('/'):
+            remote_name += name + '/'
+            try:
+                client.cwd(remote_name)
+                logger.debug('Change to remote directory: {} successfully.'.format(remote_name))
+            except:
+                try:
+                    client.mkd(remote_name)
+                    client.cwd(remote_name)
+                    logger.debug('Create an change to remote directory: {} successfully.'.format(remote_name))
+                except:
+                    logger.error('Create remote directory: {} failed.'.format(remote_name))
+                    sys.exit(1)
+    else:
+        try:
+            client.cwd(remote_path)
+            logger.debug('Change to remote directory: {} successfully.'.format(remote_path))
+        except:
+            logger.error('Change to remote directory: {} failed.'.format(remote_path))
+            sys.exit(1)
 
 
-def ftp_upload():
+def ftp_upload(client, file_name, logger):
     """
+        Upload a file to ftp server.
     """
+    local_file_size = os.stat(file_name).st_size
+    try:
+        with open(file_name, 'rb') as local_file:
+            client.storbinary('STOR {}'.format(os.path.basename(file_name)), local_file)
+        remote_file_size = client.size(os.path.basename(file_name))
+    except:
+        logger.error('Upload {} to ftp failed.'.format(file_name))
+        result = False
+        sys.exit(1)
+    if local_file_size == remote_file_size:
+        logger.debug('Upload {} to ftp successfully.'.format(file_name))
+        result = True
+    else:
+        logger.debug('Remote file size: {} local file size {} , data loss.'.format(remote_file_size, local_file_size))
+        logger.error('Upload {} to ftp failed.'.format(file_name))
+        result = False
+        sys.exit(1)
+    return result
 
 
-def ftp_download():
+def ftp_download(clinet, remote_file, logger):
     """
+        Download a file from ftp server.
     """
+    remote_list = client.nlst()
+    if remote_file in remote_list:
+        remote_file_size = client.size(remote_file)
+        try:
+            with open(remote_file, 'wb') as local_file:
+                client.retrbinary('RETR {}'.format(remote_file), local_file.write)
+            local_file_size = os.stat(remote_file).st_size
+            if remote_file_size == local_file_size:
+                logger.info('Download file {} to {} successfully.'.format(remote_file, os.getcwd()))
+                result = True
+            else:
+                logger.error('Remote file size: {} local file size {} , data loss.'.format(remote_file_size, local_file_size))
+                os.remove(remote_file)
+                logger.error('Download file {} to {} failed.'.format(remote_file, os.getcwd()))
+                result = False
+        except:
+            logger.error('Download file {} to {} failed.'.format(remote_file, os.getcwd()))
+            result = False
+    else:
+        logger.error('No such file {} in remote directory.'.format(remote_file))
+        result = False
+    return result
 
 
-def upload_log():
+def upload_log(package, module, ftpinfo, log_path, logger):
     """
+        Upload a log file and show link of the file.
     """
+    client = get_ftp(ftpinfo, logger)
+    host = socket.gethostbyname()
+    package_name = package.split('.')[0]
+    remote_path = os.path.join(ftpinfo[4], 'log', package_name, module, host).replace('\\', '/')
+    url = ''.join('http://', ftpinfo[0])
+    ftp_cwd(client, remote_path, logger, mkdir=True)
+    result = ftp_upload(client, log_path, logger)
+    client.quit()
+    if result:
+        link = '/'.join([url, remote_path, os.path.basename(log_path)])
+        logger.info(''.join(['log link: <a target="_blank" href="', link, '">', link, '</a>']))
 
 
 def unicode_gbk(file_name):
@@ -549,7 +628,6 @@ def unicode_gbk(file_name):
         file_reader.close()
         with open(file_name, 'wb') as file_writer:
             file_writer.write(content)
-
 
 
 def add_bom(file_name):
