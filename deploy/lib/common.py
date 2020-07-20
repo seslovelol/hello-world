@@ -504,7 +504,7 @@ def get_ftp(ftpinfo, logger, message=False):
         time.sleep(random.random() + 1)
         i += 1
         logger.info('{} Reconnect to {}:{}'.format(host, port))
-    if not results:
+    if not result:
         logger.error('Connect to {}:{} failed.'.format(host, port))
         sys.exit(1)
     try:
@@ -570,7 +570,7 @@ def ftp_upload(client, file_name, logger):
     return result
 
 
-def ftp_download(clinet, remote_file, logger):
+def ftp_download(client, remote_file, logger):
     """
         Download a file from ftp server.
     """
