@@ -3,29 +3,30 @@ __author__  = 'ShiQiankun'
 __mail__    = 'seslovelol@outlook.com'
 __status__  = 'Development'
 __version__ = '1.01'
-__date__    = 'Jul.13,2020'
+__date__    = 'Jul.29,2020'
 
 
 import os
 import sys
 import time
 import locale
-import tarfile
-import zipfile
 import ftplib
-import hashlib
-import difflib
 import shutil
 import socket
 import random
-import platform
-import subprocess
 import logging
+import tarfile
+import zipfile
+import hashlib
+import difflib
+import platform
+import threading
+import subprocess
 import logging.handlers
 
 
 current_time = time.strftime('_%Y%m%d%H%M%S', time.localtime())
-python_version = float(platform.python_version()[:3])
+python_version = (float(platform.python_version()[:3]), float(platform.python_version()[4:]))
 template_name = 'template.properties'
 order_txt = 'order.txt'
 
@@ -61,10 +62,10 @@ def check_arglen(min, max, logger):
     """
     length = len(sys.argv) - 1
     if length < min:
-        logger.error('too few arguments.')
+        logger.error('Too few arguments.')
         sys.exit(1)
     elif length > max:
-        logger.error('too much arguments.')
+        logger.error('Too much arguments.')
         sys.exit(1)
     else:
         return length
@@ -86,7 +87,7 @@ def get_systeminfo(logger):
 
 def check_file(file_name, logger):
     """
-        Check file.
+        Check file 3 times at most.
         Exit if it does not exists.
     """
     result = True
@@ -109,12 +110,13 @@ def change_path(path, logger):
         os.chdir(path)
         logger.debug('Change to directory: {} successfully.'.format(path))
     except:
-        logger.error('Change to directory: {} failed.'.format(path))
+        logger.error('Failed to change to directory: {} '.format(path))
         sys.exit(1)
 
 
 def check_path(path, logger, chdir=False):
     """
+        Check path 3 times at most.
         Change to the path if it exists.
         Exit if it does not exist.
     """
@@ -161,9 +163,9 @@ def remove_path(path, logger):
 def get_suffix(file_name, logger, package=True):
     """
         Get suffix of a filename.
-        Args: tar | zip | other
+        Return: tar | zip | other
     """
-    file_suffix = file_name.split('.')[-1]
+    file_suffix = file_name.split('.')[-1].lower()
     if package:
         if file_suffix in ('tar', 'zip'):
             return file_suffix
@@ -234,7 +236,7 @@ def write_zip(package_name, logger):
 
 def get_namelist(local, package_name, logger):
     """
-        Get package's namelist.
+        Get a package's namelist.
     """
     suffix = get_suffix(package_name, logger)
     package_path = os.path.join(local, package_name)
@@ -275,7 +277,7 @@ def get_stat(file_list, logger):
 
 def check_md5(file_name, logger):
     """
-        Check file's md5.
+        Check a file's md5.
     """
     local_md5 = get_md5(file_name)
     md5_file = '.'.join([file_name, 'md5'])
@@ -331,14 +333,14 @@ def read_file(file_name, logger, exclude=False):
 
 def extract_package(local, package_name, module, logger):
     """
-        Extract files from package.
+        Extract files from a package.
     """
     suffix = get_suffix(package_name, logger)
     package_path = os.path.join(local, package_name)
     package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
     change_path(local, logger)
     remove_path(os.path.join(local, module), logger)
-    if suffix == 'tar':
+    if suffix == 'tar' or suffix == 'zip' and python_version[1] > 5:
         try:
             for name in name_list:
                 if module in name:
@@ -350,7 +352,7 @@ def extract_package(local, package_name, module, logger):
             logger.error('Extract {} from package {} failed.'.format(module, package_name))
             package.close()
             sys.exit(1)
-    else:
+    elif suffix == 'zip' and python_version[1] < 6:
         try:
             for name in name_list:
                 new_name = name.encode('cp437').decode(locale.getpreferredencoding())
@@ -393,7 +395,7 @@ def check_package(local, package, logger):
 
 def check_module(local, package, module, logger, extract=True):
     """
-        Check module from package.
+        Check module from a package.
         Exit if it does not exist.
     """
     name_list = get_namelist(local, package, logger)
@@ -551,13 +553,13 @@ def ftp_upload(client, file_name, logger):
         Upload a file to ftp server.
     """
     local_file_size = os.stat(file_name).st_size
+    result = False
     try:
         with open(file_name, 'rb') as local_file:
             client.storbinary('STOR {}'.format(os.path.basename(file_name)), local_file)
         remote_file_size = client.size(os.path.basename(file_name))
     except:
         logger.error('Upload {} to ftp failed.'.format(file_name))
-        result = False
         sys.exit(1)
     if local_file_size == remote_file_size:
         logger.debug('Upload {} to ftp successfully.'.format(file_name))
@@ -565,7 +567,6 @@ def ftp_upload(client, file_name, logger):
     else:
         logger.debug('Remote file size: {} local file size {} , data loss.'.format(remote_file_size, local_file_size))
         logger.error('Upload {} to ftp failed.'.format(file_name))
-        result = False
         sys.exit(1)
     return result
 
@@ -575,6 +576,7 @@ def ftp_download(client, remote_file, logger):
         Download a file from ftp server.
     """
     remote_list = client.nlst()
+    result = False
     if remote_file in remote_list:
         remote_file_size = client.size(remote_file)
         try:
@@ -588,13 +590,10 @@ def ftp_download(client, remote_file, logger):
                 logger.error('Remote file size: {} local file size {} , data loss.'.format(remote_file_size, local_file_size))
                 os.remove(remote_file)
                 logger.error('Download file {} to {} failed.'.format(remote_file, os.getcwd()))
-                result = False
         except:
             logger.error('Download file {} to {} failed.'.format(remote_file, os.getcwd()))
-            result = False
     else:
         logger.error('No such file {} in remote directory.'.format(remote_file))
-        result = False
     return result
 
 
@@ -615,9 +614,9 @@ def upload_log(package, module, ftpinfo, log_path, logger):
         logger.info(''.join(['log link: <a target="_blank" href="', link, '">', link, '</a>']))
 
 
-def unicode_gbk(file_name):
+def utf8_gbk(file_name):
     """
-        Transfer charset from unicode to GBK.
+        Transfer charset from utf-8 to GBK.
     """
     file_reader = open(file_name, 'rb')
     try:
@@ -673,7 +672,7 @@ def execute_script(path, logger):
     if suffix.lower() == 'bat':
         check_file(script_base, logger)
         remove_bom(script_base)
-        unicode_gbk(script_base)
+        utf8_gbk(script_base)
         returncode = sub_process(script_base, logger)
     elif suffix.lower() == 'sh':
         check_file(script_base, logger)
@@ -686,25 +685,35 @@ def execute_script(path, logger):
     else:
         returncode = sub_process(script_base, logger)
     if returncode == 0:
-        logger.info('{} was executed successfully.'.format(script_base))
+        logger.info('{} has executed successfully.'.format(script_base))
     else:
-        logger.error('{} was executed failed.'.format(script_base))
+        logger.error('{} has failed to execute.'.format(script_base))
         sys.exit(1)
+
+
+def stdout_process(process, logger):
+    """
+        Show process' output.
+    """
+    while True:
+        line = process.stdout.readline().decode(locale.getpreferredencoding())
+        if line:
+            logger.info('{}'.format(line))
+        else:
+            break
 
 
 def sub_process(command, logger):
     """
         Create a subprocess.
-        Successfull: return = 0.
+        Successfull: returncode = 0.
     """
     p = subprocess.Popen('{}'.format(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    while p.poll() is True:
-        line = p.stdout.read().strip()
-        if line:
-            logger.info('Execution result: \n{}'.format(line.decode(locale.getpreferredencoding())))
+    t = threading.Thread(target=stdout_process, args=(p, logger))
+    t.start()
     p.wait()
+    t.join()
     return p.returncode
-
 
 
 def break_process(local, package, module, logger, clean_up=True):
