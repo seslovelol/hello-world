@@ -39,7 +39,7 @@ def logger():
     """
     logger = logging.getLogger('mylogger')
     logger.setLevel(logging.DEBUG)
-    handler1 = logging.StreamHandler()
+    handler1 = logging.StreamHandler(stream=sys.stdout)
     handler1.setLevel(logging.INFO)
     handler1.setFormatter(logging.Formatter("%(asctime)s" - "%(message)s"))
     logger.addFilter(handler1)
