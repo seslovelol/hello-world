@@ -5,10 +5,19 @@ __status__  = 'Development'
 __version__ = '1.01'
 __date__    = 'Jul.29,2020'
 
-from lib.common import check_arglen, check_ftp, check_md5, create_path, current_time, ftp_cwd, ftp_download, get_ftp, logger
+
 import os
 import sys
 import shutil
+from lib.common import logger
+from lib.common import ftp_cwd
+from lib.common import get_ftp
+from lib.common import check_ftp
+from lib.common import check_md5
+from lib.common import create_path
+from lib.common import current_time
+from lib.common import check_arglen
+from lib.common import ftp_download
 
 
 def get_args(logger):

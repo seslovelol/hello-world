@@ -8,7 +8,14 @@ __date__    = 'Jul.30,2020'
 
 import os
 import sys
-from lib.common import check_arglen, check_path, create_path, current_time, logger, write_tar, write_zip, get_systeminfo
+from lib.common import logger
+from lib.common import write_tar
+from lib.common import write_zip
+from lib.common import check_path
+from lib.common import create_path
+from lib.common import current_time
+from lib.common import check_arglen
+from lib.common import get_systeminfo
 
 
 def get_args(logger):

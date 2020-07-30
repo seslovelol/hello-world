@@ -12,7 +12,24 @@ import time
 import shutil
 import locale
 import logging
-from lib.common import python_version, add_bom, check_ftp, check_order, execute_script, exit_process, get_order, get_stat, get_suffix, logger, check_arglen, check_path, check_package, check_module, create_path, read_tar, read_zip, upload_log
+from lib.common import logger
+from lib.common import add_bom
+from lib.common import get_stat
+from lib.common import read_tar
+from lib.common import read_zip
+from lib.common import get_order
+from lib.common import check_ftp
+from lib.common import get_suffix
+from lib.common import upload_log
+from lib.common import check_path
+from lib.common import create_path
+from lib.common import check_order
+from lib.common import check_module
+from lib.common import check_arglen
+from lib.common import exit_process
+from lib.common import check_package
+from lib.common import python_version
+from lib.common import execute_script
 
 
 def get_args(logger):
