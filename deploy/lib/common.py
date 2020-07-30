@@ -287,7 +287,7 @@ def check_md5(file_name, logger):
         Check a file's md5.
     """
     local_md5 = get_md5(file_name)
-    md5_file = '.'.join([file_name, 'md5'])
+    md5_file = '.'.join((file_name, 'md5'))
     remote_md5 = read_file(md5_file, logger, exclude=True)[0]
     logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
     logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
@@ -406,7 +406,7 @@ def check_module(local, package, module, logger, extract=True):
         Exit if it does not exist.
     """
     name_list = get_namelist(local, package, logger)
-    temp = '/'.join([package.split('.')[0], module])
+    temp = '/'.join((package.split('.')[0], module))
     module_path = temp if get_suffix(package, logger) else temp + '/'
     if module_path in name_list:
         logger.debug('Find module {} in package {}'.format(module, package))
@@ -420,7 +420,7 @@ def remove_module(local, package, module, logger):
     """
         Clean up the module directory.
     """
-    path = '/'.join([package.split('.')[0], module])
+    path = '/'.join((package.split('.')[0], module))
     change_path(local, logger)
     remove_path(path, logger)
 
@@ -431,7 +431,7 @@ def check_order(local, package, module, logger, extract=True):
         Extract it from package if it exists.
     """
     name_list = get_namelist(local, package, logger)
-    order_path = '/'.join([package.split('.')[0], module, order_txt])
+    order_path = '/'.join((package.split('.')[0], module, order_txt))
     if order_path in name_list:
         logger.debug('Find order.txt in package.')
     else:
@@ -456,7 +456,7 @@ def check_template(local, package, logger, extract=True):
         Extract it from package if it exists.
     """
     name_list = get_namelist(local, package, logger)
-    template_path = '/'.join([package.split('.')[0], template_name])
+    template_path = '/'.join((package.split('.')[0], template_name))
     if template_path in name_list:
         logger.info('Find template file in package.')
     else:
@@ -544,7 +544,7 @@ def ftp_cwd(client, remote, logger, mkdir=False):
         Change remote directory of ftp server.
     """
     remote_list = list(filter(None, remote.replace('\\', '/').split('/')))
-    remote_path = '/'.join([client.pwd(), '/'.join(remote_list)])
+    remote_path = '/'.join((client.pwd(), '/'.join(remote_list)))
     if mkdir:
         remote_name = ''
         for name in remote_path.split('/'):
@@ -623,16 +623,16 @@ def upload_log(package, module, ftpinfo, log_path, logger):
         Upload a log file and show link of the file.
     """
     client = get_ftp(ftpinfo, logger)
-    host = socket.gethostbyname()
+    host = socket.gethostname()
     package_name = package.split('.')[0]
     remote_path = os.path.join(ftpinfo[4], 'log', package_name, module, host).replace('\\', '/')
-    url = ''.join('http://', ftpinfo[0])
+    url = ''.join(('http://', ftpinfo[0]))
     ftp_cwd(client, remote_path, logger, mkdir=True)
     result = ftp_upload(client, log_path, logger)
     client.quit()
     if result:
-        link = '/'.join([url, remote_path, os.path.basename(log_path)])
-        logger.info(''.join(['log link: <a target="_blank" href="', link, '">', link, '</a>']))
+        link = '/'.join((url, remote_path, os.path.basename(log_path)))
+        logger.info(''.join(('log link: <a target="_blank" href="', link, '">', link, '</a>')))
 
 
 def utf8_gbk(file_name):
@@ -697,11 +697,11 @@ def execute_script(path, logger):
         returncode = sub_process(script_base, logger)
     elif suffix.lower() == 'sh':
         check_file(script_base, logger)
-        script = ' '.join(['sh', script_base])
+        script = ' '.join(('sh', script_base))
         returncode = sub_process(script, logger)
     elif suffix.lower() == 'py':
         check_file(script_base, logger)
-        script = ' '.join(['python', script_base])
+        script = ' '.join(('python', script_base))
         returncode = sub_process(script, logger)
     else:
         returncode = sub_process(script_base, logger)
