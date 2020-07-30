@@ -37,22 +37,29 @@ def logger():
             handler1 is used to show messages in console.
             handler2 is used to write messages into log file.
     """
-    logger = logging.getLogger('mylogger')
+    # logging.basicConfig(
+    #                 level    = logging.DEBUG,
+    #                 format   = '%(asctime)s  %(filename)s : %(levelname)s  %(message)s',
+    #                 datefmt  = '%Y-%m-%d %A %H:%M:%S',
+    #                 filename = logFilename,
+    #                 filemode = 'a')
+    logger = logging.getLogger('logger')
     logger.setLevel(logging.DEBUG)
-    handler1 = logging.StreamHandler(stream=sys.stdout)
-    handler1.setLevel(logging.INFO)
-    handler1.setFormatter(logging.Formatter("%(asctime)s" - "%(message)s"))
-    logger.addFilter(handler1)
-    log_path = os.path.join(os.getcwd(), 'log')
+    console = logging.StreamHandler(stream=sys.stdout)
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(filename)s %(levelname)s : %(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+    log_path = r'/home/deploytest/log'
     if not os.path.isdir(log_path):
         try:
             os.makedirs(log_path)
             print('Log path: {}'.format(log_path))
         except:
             print('Warning: Create log directory failed.')
-    handler2 = logging.handlers.TimedRotatingFileHandler(os.path.join(log_path, 'run.log'), when='W0', interval=1, backupCount=0)
-    handler2.setFormatter("%(asctime)s" - "%(levelname)s" - "%(message)s")
-    logger.addHandler(handler2)
+    file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_path, 'run.log'), when='W0', interval=1, backupCount=0)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
     return logger
 
 
@@ -285,10 +292,9 @@ def check_md5(file_name, logger):
     logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
     logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
     if local_md5 == remote_md5:
-        logger.info('')
-        logger.info('MD5 codes are equal , data integrity.')
+        logger.info('MD5 codes are equal,data integrity.')
     else:
-        logger.error('MD5 codes are different, data loss.')
+        logger.error('MD5 codes are different,data loss.')
         sys.exit(1)
 
 
@@ -320,7 +326,7 @@ def read_file(file_name, logger, exclude=False):
         finally:
             if exclude:
                 # Remove the lines with '#' or the empty lines from content.
-                [content.remove(t) for t in list(content) if t.startwith('#') or t == '']
+                [content.remove(t) for t in list(content) if t.startswith('#') or t == '']
                 new_content = []
                 for c in content:
                     new_content.append(c.strip())
@@ -329,6 +335,7 @@ def read_file(file_name, logger, exclude=False):
     else:
         logger.error('No such file: {}'.format(file_name))
         sys.exit(1)
+    return content
 
 
 def extract_package(local, package_name, module, logger):
@@ -474,6 +481,20 @@ def diff_file(file1, file2, output, logger):
     logger.debug('Diff files done.')
 
 
+def check_ftp(ftpinfo, logger):
+    """
+        Check ftp info.
+    """
+    if len(ftpinfo.split(':')) != 5:
+        logger.error('Ftpinfo error: must be 5 arguments.')
+        sys.exit(1)
+    elif len(ftpinfo.split(':')[0].split('.')) != 4:
+        logger.error('Ftpinfo error: ip error.')
+        sys.exit(1)
+    else:
+        return ftpinfo.split(':')
+
+
 def ftp_connect(host, port):
     """
         Create a ftp connection.
@@ -505,7 +526,7 @@ def get_ftp(ftpinfo, logger, message=False):
             break
         time.sleep(random.random() + 1)
         i += 1
-        logger.info('{} Reconnect to {}:{}'.format(host, port))
+        logger.info('{} Reconnect to {}:{}'.format(i, host, port))
     if not result:
         logger.error('Connect to {}:{} failed.'.format(host, port))
         sys.exit(1)
