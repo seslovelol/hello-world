@@ -47,7 +47,7 @@ def logger():
     logger.setLevel(logging.DEBUG)
     console = logging.StreamHandler(stream=sys.stdout)
     console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(filename)s %(levelname)s : %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(filename)s %(lineno)s %(levelname)s : %(message)s')
     console.setFormatter(formatter)
     logger.addHandler(console)
     log_path = r'/home/deploytest/log'
@@ -147,7 +147,7 @@ def create_path(path, logger, chdir=False):
     """
     if not os.path.isdir(path):
         try:
-            os.mkdir(path)
+            os.makedirs(path)
             logger.debug('Create directory: {}'.format(path))
         except:
             logger.error('Create directory: {} failed.'.format(path))
