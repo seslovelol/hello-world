@@ -82,30 +82,31 @@ def backup_path(logger):
         # Add files of source path to package.
         for file_name in files:
             try:
-                logger.debug('Adding file {} to package.'.format(file_name))
                 if platform == 'Windows':
                     package_file.write(os.path.join(root, file_name), arcname=os.path.join(relroot, file_name))
                 else:
                     package_file.add(os.path.join(root, file_name), arcname=os.path.join(relroot, file_name))
+                logger.debug('Adding file {} to package.'.format(os.path.join(root, file_name)))
             except:
-                logger.error('Failed to add file {} to package.'.format(file_name))
+                logger.error('Failed to add file {} to package.'.format(os.path.join(root, file_name)))
                 sys.exit(1)
         # Add dirs of source path to package.
         for dir_name in dirs:
             try:
-                logger.debug('Adding file {} to package.'.format(dir_name))
                 if platform == 'Windows':
                     package_file.write(os.path.join(root, dir_name), arcname=os.path.join(relroot, dir_name))
                 else:
                     package_file.add(os.path.join(root, dir_name), arcname=os.path.join(relroot, dir_name))
+                logger.debug('Adding file {} to package.'.format(os.path.join(root, dir_name)))
             except:
-                logger.error('Failed to add file {} to package.'.format(dir_name))
+                logger.error('Failed to add file {} to package.'.format(os.path.join(root, dir_name)))
                 sys.exit(1)
-        package_file.close()
-        logger.info('Backup {} successfully.'.format(base_name))
-        logger.info('Backup from {} to {}'.format(source, package_name))
-        print(0)
-        sys.exit(0)
+    package_file.close()
+    logger.info('Backup {} successfully.'.format(base_name))
+    logger.info('Backup from {} to {}'.format(source, package_name))
+    print(0)
+    sys.exit(0)
+
 
 if __name__ == "__main__":
     backup_path(logger)

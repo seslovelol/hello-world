@@ -134,6 +134,7 @@ def check_path(path, logger, chdir=False):
             if chdir:
                 change_path(path, logger)
             result = False
+            break
     if result:
         logger.error('No such directory: {}'.format(path))
         sys.exit(1)
