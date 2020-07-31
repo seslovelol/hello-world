@@ -22,3 +22,10 @@ python /home/deploytest/deploy/Backup_Directory.py /home/deploytest/backup/ /hom
 python /home/deploytest/deploy/Update_Program.py /home/deploytest/local/test_e1_20200730001/ /home/deploytest/update/ test_e1.tar APP 192.168.137.82:21:ftpuser1:123456:/devops/
 ```
 
+### Technical Check:
+
+```python
+# check process port url
+python /home/deploytest/deploy/Technical_Check.py process#ssh,python port#22,3306 url#https://www.baidu.com/,https://cn.bing.com/
+```
+
