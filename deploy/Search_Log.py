@@ -22,7 +22,7 @@ def get_lineno(file_path):
                 break
             line_count += buffer.count(b'\n')
         file_reader.close()
-        lineno = line_count - 9
+        lineno = 0 if line_count < 10 else line_count - 9
         return lineno
     else:
         print('Error: no such file {}'.format(file_path))
@@ -44,10 +44,11 @@ def search_keywords(file_path, keywords):
                 counter += 1
                 print(content)
                 break
+            lineno += 1
     if counter == length:
         print('Find all keywords from {}'.format(file_path))
         sys.exit(1)
-    elif:
+    else:
         print('Can not find all keywords from {}'.format(file_path))
         sys.exit(1)
 
