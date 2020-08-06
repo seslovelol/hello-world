@@ -39,8 +39,9 @@ def get_args(logger):
     """
     check_arglen(5, 5, logger)
     local, update, package, module, ftpinfo = sys.argv[1:]
-    logger.info('Begin to execute {} {} {} {} {} FTPINFO'.format(\
-        os.path.join(os.getcwd(), sys.argv[0]), local, update, package, module))
+    logger.info('Begin to execute {} {} {} {} {} FTPINFO'.format(
+        os.path.join(os.getcwd(), sys.argv[0]), local, update, package, module
+    ))
     check_path(local, logger)
     check_package(local, package, logger)
     check_module(local, package, module, logger)
@@ -97,7 +98,6 @@ def update_program(logger):
     add_bom(temp_log)
     upload_log(package, module, ftpinfo, temp_log, logger)
     exit_process(local, package, module, logger)
-
 
 
 def file_logger(path, logger):

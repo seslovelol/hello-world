@@ -21,8 +21,9 @@ def get_args(logger):
     """
     length = check_arglen(1, 3, logger)
     process, port, url = split_arg(sys.argv[1:], logger)
-    logger.info('Begin to execute {} {} {} {}'.format(\
-        os.path.join(os.getcwd(), sys.argv[0]), process, port, url))
+    logger.info('Begin to execute {} {} {} {}'.format(
+        os.path.join(os.getcwd(), sys.argv[0]), process, port, url
+    ))
     return process, port, url
 
 

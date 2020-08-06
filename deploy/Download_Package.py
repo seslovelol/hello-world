@@ -27,8 +27,9 @@ def get_args(logger):
     """
     check_arglen(5, 5, logger)
     package, local, short, code, ftpinfo = sys.argv[1:]
-    logger.info('Begin to execute {} {} {} {} FTPINFO'.format(\
-        os.path.join(os.getcwd(), sys.argv[0]), package, local, short, code))
+    logger.info('Begin to execute {} {} {} {} FTPINFO'.format(
+        os.path.join(os.getcwd(), sys.argv[0]), package, local, short, code
+    ))
     ftpinfo = check_ftp(ftpinfo, logger)
     return package, local, short, code, ftpinfo
 

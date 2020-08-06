@@ -28,8 +28,9 @@ def get_args(logger):
     target, source = sys.argv[1:3]
     if arg_len == 3:
         exclude = sys.argv[3]
-    logger.info('Begin to execute {} {} {} {} FTPINFO'.format(\
-        os.path.join(os.getcwd(), sys.argv[0]), target, source, exclude))
+    logger.info('Begin to execute {} {} {} {} FTPINFO'.format(
+        os.path.join(os.getcwd(), sys.argv[0]), target, source, exclude
+    ))
     create_path(target, logger)
     check_path(source, logger)
     exclude = check_exclude(exclude, source)
