@@ -29,3 +29,11 @@ python /home/deploytest/deploy/Update_Program.py /home/deploytest/local/test_e1_
 python /home/deploytest/deploy/Technical_Check.py process#ssh,python port#22,3306 url#https://www.baidu.com/,https://cn.bing.com/
 ```
 
+### Backup Program:
+
+```python
+# Backup program's files which will be update.
+ python /home/deploytest/deploy/Backup_Program.py /home/deploytest/local/test_e2_20200730001/ /home/deploytest/update/ /home/deploytest/backup/ test_e2.tar APP
+ ```
+
+ 
