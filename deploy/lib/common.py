@@ -691,16 +691,16 @@ def execute_script(path, logger):
     if os.path.isdir(script_dir):
         os.chdir(script_dir)
     suffix = get_suffix(script_base, logger, package=False)
-    if suffix.lower() == 'bat':
+    if suffix == 'bat':
         check_file(script_base, logger)
         remove_bom(script_base)
         utf8_gbk(script_base)
         returncode = sub_process(script_base, logger)
-    elif suffix.lower() == 'sh':
+    elif suffix == 'sh':
         check_file(script_base, logger)
         script = ' '.join(('sh', script_base))
         returncode = sub_process(script, logger)
-    elif suffix.lower() == 'py':
+    elif suffix == 'py':
         check_file(script_base, logger)
         script = ' '.join(('python', script_base))
         returncode = sub_process(script, logger)
