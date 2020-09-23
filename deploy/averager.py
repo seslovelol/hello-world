@@ -3,36 +3,35 @@ from collections import namedtuple
 
 result = namedtuple('result', 'count average')
 def averager():
-    total = 0.0
     count = 0
+    total = 0.0
     average = None
     while True:
         term = yield
         if term is None:
             break
-        total += term
         count += 1
+        total += term
         average = total / count
     return result(count, average)
 
-def grouper(result, key):
+def grouper(results, key):
     while True:
-        result[key] = yield from averager()
+        results[key] = yield from averager()
 
 def main(data):
-    result = {}
+    results = {}
     for key, values in data.items():
-        group = grouper(result, key)
+        group = grouper(results, key)
         next(group)
         for value in values:
             group.send(value)
         group.send(None)
-    report(result)
+    report(results)
 
-def report(result):
-    for key, values in result.items():
-        print('{} {} {:.2f} {}'.format(values.count, key.split(';')[0], values.average, key.split(';')[1]))
-
+def report(results):
+    for key, value in results.items():
+        print('{} {} {:.2f} {}'.format(value.count, key.split(';')[0], value.average, key.split(';')[1]))
 
 if __name__ == "__main__":
     data = {
