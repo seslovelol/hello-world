@@ -50,7 +50,7 @@ def compute_duration(previous_action):
     elif previous_action == 'go home':
         interval = 1
     else:
-        raise ValueError('Unknown previous action {}'.format())
+        raise ValueError('Unknown previous action {}'.format(previous_action))
     return int(random.expovariate(1/interval))
 
 def main(end_time = DEFAULT_END_TIME):
