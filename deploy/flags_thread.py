@@ -44,11 +44,10 @@ def download_one(base_url, cc, verbose):
         res = e.response
         if res.status_code == 404:
             status = HTTPStatus.not_found
-            error_msg = 'HTTP error 404 - not find'
         else:
             status = HTTPStatus.error
-            error_msg = 'HTTP error {res.status_code} - {res.reason}'.format(res)
-    except requests.exceptions.ConnectionError as e:
+        error_msg = 'HTTP error {res.status_code} - {res.reason}'.format(res=res)
+    except requests.exceptions.ConnectionError:
         status = HTTPStatus.error
         error_msg = 'Connection error'
     else:
@@ -57,20 +56,19 @@ def download_one(base_url, cc, verbose):
         error_msg = ''
     if verbose and error_msg:
         print('*** Error for {}: {}'.format(cc, error_msg))
-    QUEUE.put(status)
+    # QUEUE.put(status)
     return Result(status, cc)
 
 def download_many(base_url, cc_lst, verbose, max_req):
     counter = Counter()
-    cc_iter = sorted(cc_lst)
     with futures.ThreadPoolExecutor(max_workers=max_req) as executor:
         to_do_map = {}
-        for cc in cc_iter:
+        for cc in cc_lst:
             future = executor.submit(download_one, base_url, cc, verbose)
             to_do_map[future] = cc
         done_iter = futures.as_completed(to_do_map)
         if not verbose:
-            done_iter = tqdm.tqdm(done_iter, total=len(cc_iter))
+            done_iter = tqdm.tqdm(done_iter, total=len(cc_lst))
         for future in done_iter:
             res = future.result()
             status = res.status
@@ -89,19 +87,17 @@ def download_many(base_url, cc_lst, verbose, max_req):
 
 def main(download_many, default_concur_req, max_concur_req):
     # cc_lst = sorted(POP20_CC)
-    cc_set = set()
     a_z = string.ascii_lowercase
-    cc_set.update(a+b for a in a_z for b in a_z)
-    cc_lst = sorted(cc_set)
-    actual_req = min(default_concur_req, max_concur_req, len(cc_lst))
+    cc_all = sorted(a+b for a in a_z for b in a_z)
+    actual_req = min(default_concur_req, max_concur_req, len(cc_all))
     base_url = SERVERS['DELAY']
     verbose = True
     t0 = timeit.default_timer()
-    counter = download_many(base_url, cc_lst, verbose, actual_req)
+    counter = download_many(base_url, cc_all, verbose, actual_req)
+    t1 = timeit.default_timer()
     for key, value in counter.items():
         print(key, ':', value)
-    print('Total:', sum(counter.values()))
-    print(timeit.default_timer() - t0)
+    print(t1 - t0)
 
 if __name__ == '__main__':
     main(download_many, DEFAULT_CONCUR_REQ, MAX_CONCUR_REQ)
