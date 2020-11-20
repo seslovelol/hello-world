@@ -68,32 +68,28 @@ def update_program(logger):
     module_path = os.path.join(local, package.split('.')[0], module)
     for name in content:
         real_path = os.path.join(module_path, name)
+        logger.info('[ {}/{} ] {} updateing...'.format(step_now, step_all, name))
         # scripts
-        if name.endswith(('.py', '.bat', '.sh')):
-            logger.info('[ {}/{} ] {} executing...'.format(step_now, step_all, name))
+        if name.lower().endswith(('.py', '.bat', '.sh')):
             execute_script(real_path, logger)
-            step_now += 1
         # dirs
         elif os.path.isdir(real_path):
-            logger.info('[ {}/{} ] {} updating...'.format(step_now, step_all, name))
             result = copy_dir(real_path, update, logger)
-            logger.info('Copy tree {} to {} successfully.'.format(name, update))
+            logger.info('Copy directory {} to {} successfully.'.format(name, update))
             get_stat(result, logger)
-            step_now += 1
-        # packages
-        elif os.path.isfile(real_path) and name.endswith(('.zip', '.tar')):
-            result = copy_package(real_path, update, local, step_all, step_now, logger)
-            get_stat(result, logger)
-            step_now += 1
-        # files
         elif os.path.isfile(real_path):
-            result = copy_file(real_path, update, step_all, step_now, logger)
+            # packages
+            if name.endswith(('.zip', '.tar')):
+                result = copy_package(real_path, update, local, logger)
+            # files
+            else:
+                result = copy_file(real_path, update, logger)
             get_stat(result, logger)
-            step_now += 1
         # error
         else:
             logger.error('File or dir {} can not find in module {}'.format(name, module_path))
-            sys.exit(0)
+            sys.exit(1)
+        step_now += 1
     logger.removeHandler(handler)
     add_bom(temp_log)
     upload_log(package, module, ftpinfo, temp_log, logger)
@@ -114,7 +110,7 @@ def file_logger(path, logger):
     return handler, log_path
 
 
-def copy_file(source, target, step_all, step, logger):
+def copy_file(source, target, logger):
     """
         Copy a file to target path.
     """
@@ -123,7 +119,6 @@ def copy_file(source, target, step_all, step, logger):
     file_list = []
     if os.path.isfile(target_name):
         file_list.append(target_name)
-    logger.info('[ {}/{} ] {} updating...'.format(step, step_all, base_name))
     try:
         shutil.copy(source, target_name)
     except:
@@ -152,14 +147,13 @@ def copy_dir(source, target, logger, copy_list=[]):
     return copy_list
 
 
-def copy_package(source, target, local, step_all, step, logger):
+def copy_package(source, target, local, logger):
     """
         Extract files to target path.
     """
     suffix = get_suffix(source, logger)
     base_name = os.path.basename(source)
     package_file, name_list = read_tar(source, logger) if suffix == 'tar' else read_zip(source, logger)
-    logger.info('[ {}/{} ] {} updating...'.format(step, step_all, base_name))
     cover_list = []
     for name in name_list:
         # file_name = os.path.join(target, name) if suffix == 'tar' else os.path.join(target, name.encode('cp437').decode(locale.getpreferredencoding()))
