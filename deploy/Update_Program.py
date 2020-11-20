@@ -2,8 +2,8 @@
 __author__  = 'ShiQiankun'
 __mail__    = 'seslovelol@outlook.com'
 __status__  = 'Development'
-__version__ = '1.01'
-__date__    = 'Jul.30,2020'
+__version__ = '1.02'
+__date__    = 'Nov.20,2020'
 
 
 import os

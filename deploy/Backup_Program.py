@@ -2,12 +2,13 @@
 __author__  = 'ShiQiankun'
 __mail__    = 'seslovelol@outlook.com'
 __status__  = 'Development'
-__version__ = '1.01'
-__date__    = 'Aug.01,2020'
+__version__ = '1.02'
+__date__    = 'Nov.20,2020'
 
 
 import os
 import sys
+import configparser
 from lib.common import logger
 from lib.common import read_tar
 from lib.common import read_zip
@@ -52,36 +53,45 @@ def backup_program(logger):
     logger = logger()
     local, update, backup, package, module, order = get_args(logger)
     backup = os.path.join(backup, 'programbak')
+    temp_path = os.path.join(local, 'log', module)
     create_path(backup, logger)
+    create_path(temp_path, logger)
     # get content from order.txt
     content = get_order(order, logger)
     step_all = len(content)
     step_now = 1
-    cover_list = []
+    add_list = []
     # Module's real path.
     module_path = os.path.join(local, package.split('.')[0], module)
+    config_file = os.path.join(temp_path, 'backup_program.ini')
+    remove_config(config_file, logger)
     for name in content:
         real_path = os.path.join(module_path, name)
-        target = os.path.join(backup, name + current_time + '.zip') if get_systeminfo(logger) == 'Windows' \
-            else os.path.join(backup, name + current_time + '.tar')
+        package_suffix = '.zip' if get_systeminfo(logger) == 'windows' else '.tar'
+        target = os.path.join(backup, name + current_time + package_suffix)
         # script
-        if name.endswith(('.sh', '.py', '.bat')):
+        if name.lower().endswith(('.sh', '.py', '.bat')):
             logger.info('[ {}/{} ] {} is a script, pass.'.format(step_now, step_all, name))
             step_now += 1
         # dir
         elif os.path.isdir(real_path):
-            temp, step_now = backup_dir(real_path, update, target, step_now, step_all, logger)
+            temp = backup_dir(real_path, update, target, step_now, step_all, logger)
         # package
-        elif os.path.isfile(real_path) and name.endswith(('.zip', '.tar')):
-            temp, step_now = backup_package(real_path, update, target, step_now, step_all, logger)
+        elif os.path.isfile(real_path) and name.lower().endswith(('.zip', '.tar')):
+            temp = backup_package(real_path, update, target, step_now, step_all, logger)
         # file
         elif os.path.isfile(real_path):
-            temp, step_now = backup_file(name, update, target, step_now, step_all, logger)
+            temp = backup_file(name, update, target, step_now, step_all, logger)
         else:
             logger.error('No such file or dir {} in {}'.format(name, local))
             sys.exit(1)
-        if temp: cover_list.append(temp)
+        if temp: add_list += temp
+        step_now += 1
     logger.info('Program files have been backup successfully.')
+    if add_list:
+        write_config(config_file, 'addFileList', '|'.join(add_list), logger, option='add program path list')
+        logger.info('Not backup file list:')
+        for add_file in add_list: logger.info(add_file)
     exit_process(local, package, module, logger)
 
 
@@ -91,9 +101,9 @@ def backup_file(name, source, target, step, step_all, logger):
     """
     logger.info('[ {}/{} ] {} backuping...'.format(step, step_all, name))
     source_name = os.path.join(source, name)
+    add_list = []
     if os.path.isfile(source_name):
         package = write_zip(target, logger) if get_systeminfo(logger) == 'Windows' else write_tar(target, logger)
-        add = ''
         try:
             logger.debug('Adding file {} to package {}'.format(source_name, target))
             if get_systeminfo(logger) == 'Windows':
@@ -107,10 +117,9 @@ def backup_file(name, source, target, step, step_all, logger):
         logger.info('Backup file {} done.'.format(name))
         logger.info('[PATH-> {} ] [file count: {} ]'.format(target, 1))
     else:
-        logger.info('[ {}/{} ] {} not find in {}'.format(step, step_all, source))
-        add = name
-    step += 1
-    return add, step
+        logger.info('[ {}/{} ] {} not find in updatepath, pass'.format(step, step_all, source))
+        add_list.append(source_name)
+    return add_list
 
 
 def get_namelist(path, length, file_list=[]):
@@ -152,13 +161,12 @@ def backup_dir(dir_path, source, target, step, step_all, logger):
                 logger.error('Add file {} to package {} failed.'.format(source_name, target))
                 sys.exit(1)
         else:
-            add_list.append(name)
+            add_list.append(source_name)
     package.close()
     name_list.clear()
     logger.info('Backup dir {} done.'.format(basename))
     logger.info('[PATH-> {} ] [file count: {} ]'.format(target, count))
-    step += 1
-    return add_list, step
+    return add_list
 
 
 def backup_package(package_path, source, target, step, step_all, logger):
@@ -172,7 +180,7 @@ def backup_package(package_path, source, target, step, step_all, logger):
     suffix = get_suffix(package_path, logger)
     local_package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
     for name in name_list:
-        source_name = os.path.join(source, name)
+        source_name = os.path.join(source, name.replace(r'\/'.replace(os.sep, ''), os.sep))
         if os.path.isfile(source_name):
             try:
                 logger.debug('Adding file {} to package {}'.format(source_name, target))
@@ -185,12 +193,40 @@ def backup_package(package_path, source, target, step, step_all, logger):
                 logger.error('Add file {} to package {} failed.'.format(source_name, target))
                 sys.exit(1)
         else:
-            add_list.append(name)
+            add_list.append(source_name)
     package.close()
     logger.info('Backup package {} done.'.format(os.path.basename(package_path)))
     logger.info('[PATH-> {} ] [file count: {} ]'.format(target, count))
-    step += 1
-    return add_list, step
+    return add_list
+
+
+def write_config(filepath, section, item, logger, option='backup program path'):
+    """
+        Write backup files' path to a config file.
+    """
+    cf = configparser.ConfigParser()
+    if os.path.isfile(filepath):
+        cf.read(section)
+    if section in cf.sections():
+        cf.set(section, option, item)
+    else:
+        cf.add_section(section)
+        cf.set(section, option, item)
+    with open(filepath, 'w+') as f:
+        cf.write(f)
+
+
+def remove_config(filepath, logger):
+    """
+        Clean up config files.
+    """
+    if os.path.isfile(filepath):
+        logger.debug('Find config file {}'.format(filepath))
+        try:
+            os.remove(filepath)
+            logger.debug('Remove config file {} successfully.'.format(filepath))
+        except :
+            logger.debug('Failed to remove config file {}.'.format(filepath))
 
 
 if __name__ == "__main__":
