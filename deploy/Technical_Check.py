@@ -14,20 +14,20 @@ from lib.common import logger
 from lib.common import check_arglen
 
 
-def get_args(logger):
+def get_args():
     """
         Get arguments:
         Args: process, port, url.
     """
-    length = check_arglen(1, 3, logger)
-    process, port, url = split_arg(sys.argv[1:], logger)
+    length = check_arglen(1, 3)
+    process, port, url = split_arg(sys.argv[1:])
     logger.info('Begin to execute {} {} {} {}'.format(
         os.path.join(os.getcwd(), sys.argv[0]), process, port, url
     ))
     return process, port, url
 
 
-def split_arg(args, logger):
+def split_arg(args):
     """
         Split arguments by '#', then split them by ','.
     """
@@ -51,7 +51,7 @@ def split_arg(args, logger):
     return process, port, url
 
 
-def check_port(port, count, logger):
+def check_port(port, count):
     """
         Check local machine;s port.
     """
@@ -66,7 +66,7 @@ def check_port(port, count, logger):
     return count
 
 
-def check_process(process, count, logger):
+def check_process(process, count):
     """
         Check local machine's process.
     """
@@ -82,7 +82,7 @@ def check_process(process, count, logger):
     return count
 
 
-def check_url(url, count, logger):
+def check_url(url, count):
     """
         Check url.
     """
@@ -101,9 +101,8 @@ def check_url(url, count, logger):
     return count
 
 
-def technical_check(logger):
-    logger = logger()
-    process, port, url = get_args(logger)
+def technical_check():
+    process, port, url = get_args()
     process_total = len(process)
     port_total = len(port)
     url_total = len(url)
@@ -111,11 +110,11 @@ def technical_check(logger):
     port_count = 0
     url_count = 0
     for p in port:
-        port_count = check_port(p, port_count, logger)
+        port_count = check_port(p, port_count)
     for p in process:
-        process_count = check_process(p, process_count, logger)
+        process_count = check_process(p, process_count)
     for u in url:
-        url_count = check_url(u, url_count, logger)
+        url_count = check_url(u, url_count)
     logger.info('Process total: {},count: {}'.format(process_total, process_count))
     logger.info('Port total: {},count: {}'.format(port_total, port_count))
     logger.info('Url total: {},count: {}'.format(url_total, url_count))
@@ -128,4 +127,4 @@ def technical_check(logger):
 
 
 if __name__ == "__main__":
-    technical_check(logger)
+    technical_check()

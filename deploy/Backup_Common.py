@@ -23,47 +23,45 @@ from lib.common import check_package
 from lib.common import get_systeminfo
 
 
-def get_args(logger):
+def get_args():
     """
         Get arguments.
         Args: localpath, updatepath, package, module.
     """
-    check_arglen(6, 6, logger)
+    check_arglen(6, 6)
     local, update, backup, package, module, env = sys.argv[1:]
     logger.info('Begin to execute {} {} {} {} {} {} {}'.format(
-        os.path.join(os.getcwd(), sys.argv[0]), local, update, backup, package, module, env
-    ))
+        os.path.join(os.getcwd(), sys.argv[0]), local, update, backup, package, module, env))
     check_path(local, logger, chdir=True)
-    check_package(local, package, logger)
-    check_module(local, package, module, logger)
-    create_path(backup, logger)
-    check_path(update, logger)
+    check_package(local, package)
+    check_module(local, package, module)
+    create_path(backup)
+    check_path(update)
     return local, update, backup, package, module, env
 
 
-def backup_common(logger):
+def backup_common():
     """
         Backup files of updatepath which will be update.
     """
-    logger = logger()
-    local, update, backup, package, module, env = get_args(logger)
+    local, update, backup, package, module, env = get_args()
     backup = os.path.join(backup, 'programbak')
-    create_path(backup, logger)
+    create_path(backup)
     # Module's real path.
     env_path = os.path.join(local, package.split('.')[0], module, env)
     if os.path.isdir(env_path):
-        target = os.path.join(backup, ''.join([env, current_time, '.zip'])) if get_systeminfo(logger) == 'Windows' \
+        target = os.path.join(backup, ''.join([env, current_time, '.zip'])) if get_systeminfo() == 'Windows' \
             else os.path.join(backup, ''.join([env, current_time, '.tar']))
-        backup_list = backup_dir(env_path, update, target, logger)
+        backup_list = backup_dir(env_path, update, target)
         logger.info('Backup common files successfully.')
         if backup_list:
             logger.info('Backup list:')
             for filename in backup_list:
                 logger.info(filename)
-        exit_process(local, package, module, logger)
+        exit_process(local, package, module)
     else:
         logger.error('No such env dir {} in module'.format(env, module))
-        break_process(local, package, module, logger)
+        break_process(local, package, module)
 
 
 def get_namelist(path, length, file_list=[]):
@@ -80,7 +78,7 @@ def get_namelist(path, length, file_list=[]):
     return file_list
 
 
-def backup_dir(dir_path, source, target, logger):
+def backup_dir(dir_path, source, target):
     """
         Backup updatepath's files which also in the localpath's dir.
     """
@@ -89,13 +87,13 @@ def backup_dir(dir_path, source, target, logger):
     name_list = get_namelist(basename, len(basename))
     add_list = []
     count = 0
-    package = write_zip(target, logger) if get_systeminfo(logger) == 'Windows' else write_tar(target, logger)
+    package = write_zip(target) if get_systeminfo() == 'Windows' else write_tar(target)
     for name in name_list:
         source_name = os.path.join(source, name)
         if os.path.isfile(source_name):
             try:
                 logger.debug('Adding file {} to package {}'.format(source_name, target))
-                if get_systeminfo(logger) == 'Windows':
+                if get_systeminfo() == 'Windows':
                     package.write(source_name, arcname=name)
                 else:
                     package.add(source_name, arcname=name)
@@ -113,4 +111,4 @@ def backup_dir(dir_path, source, target, logger):
 
 
 if __name__ == "__main__":
-    backup_common(logger)
+    backup_common()

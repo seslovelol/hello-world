@@ -22,6 +22,7 @@ from lib.common import check_ftp
 from lib.common import get_suffix
 from lib.common import upload_log
 from lib.common import check_path
+from lib.common import file_logger
 from lib.common import create_path
 from lib.common import check_order
 from lib.common import check_module
@@ -32,36 +33,35 @@ from lib.common import python_version
 from lib.common import execute_script
 
 
-def get_args(logger):
+def get_args():
     """
         Get args.
         Args: localpath, updatepath, packagename, module, ftpinfo
     """
-    check_arglen(5, 5, logger)
+    check_arglen(5, 5)
     local, update, package, module, ftpinfo = sys.argv[1:]
     logger.info('Begin to execute {} {} {} {} {} FTPINFO'.format(
         os.path.join(os.getcwd(), sys.argv[0]), local, update, package, module
     ))
-    check_path(local, logger)
-    check_package(local, package, logger)
-    check_module(local, package, module, logger)
-    create_path(update, logger)
-    ftpinfo = check_ftp(ftpinfo, logger)
-    order = check_order(local, package, module, logger)
+    check_path(local)
+    check_package(local, package)
+    check_module(local, package, module)
+    create_path(update)
+    ftpinfo = check_ftp(ftpinfo)
+    order = check_order(local, package, module)
     return local, update, package, module, ftpinfo, order
 
 
-def update_program(logger):
+def update_program():
     """
         Update files from localpath to updatepath.
     """
-    logger = logger()
-    local, update, package, module, ftpinfo, order = get_args(logger)
+    local, update, package, module, ftpinfo, order = get_args()
     temp_path = '/'.join((local, 'log', module))
-    create_path(temp_path, logger)
-    handler, temp_log = file_logger(temp_path, logger)
+    create_path(temp_path)
+    handler, temp_log = file_logger(temp_path, 'update_program')
     # Get content list from order.txt
-    content = get_order(order, logger)
+    content = get_order(order)
     step_all = len(content)
     step_now = 1
     # Module's real path.
@@ -71,20 +71,20 @@ def update_program(logger):
         logger.info('[ {}/{} ] {} updateing...'.format(step_now, step_all, name))
         # scripts
         if name.lower().endswith(('.py', '.bat', '.sh')):
-            execute_script(real_path, logger)
+            execute_script(real_path)
         # dirs
         elif os.path.isdir(real_path):
-            result = copy_dir(real_path, update, logger)
+            result = copy_dir(real_path, update)
             logger.info('Copy directory {} to {} successfully.'.format(name, update))
-            get_stat(result, logger)
+            get_stat(result)
         elif os.path.isfile(real_path):
             # packages
             if name.endswith(('.zip', '.tar')):
-                result = copy_package(real_path, update, local, logger)
+                result = copy_package(real_path, update)
             # files
             else:
-                result = copy_file(real_path, update, logger)
-            get_stat(result, logger)
+                result = copy_file(real_path, update)
+            get_stat(result)
         # error
         else:
             logger.error('File or dir {} can not find in module {}'.format(name, module_path))
@@ -92,15 +92,15 @@ def update_program(logger):
         step_now += 1
     logger.removeHandler(handler)
     add_bom(temp_log)
-    upload_log(package, module, ftpinfo, temp_log, logger)
-    exit_process(local, package, module, logger)
+    upload_log(package, module, ftpinfo, temp_log)
+    exit_process(local, package, module)
 
 
-def file_logger(path, logger):
+def file_logger(path, name):
     """
         Write messages to a log file.
     """
-    log_name = time.strftime('%Y%m%d%H%M%S_update.log', time.localtime())
+    log_name = time.strftime('%Y%m%d%H%M%S_{}.log'.format(name), time.localtime())
     log_path = os.path.join(path, log_name)
     handler = logging.FileHandler(log_path, encoding='utf-8')
     formatter = logging.Formatter('%(asctime)s %(filename)s %(levelname)s : %(message)s')
@@ -110,7 +110,7 @@ def file_logger(path, logger):
     return handler, log_path
 
 
-def copy_file(source, target, logger):
+def copy_file(source, target):
     """
         Copy a file to target path.
     """
@@ -128,7 +128,7 @@ def copy_file(source, target, logger):
     return file_list
 
 
-def copy_dir(source, target, logger, copy_list=[]):
+def copy_dir(source, target, copy_list=[]):
     """
         Copy sub files and dirs from source path to target path.
     """
@@ -143,17 +143,17 @@ def copy_dir(source, target, logger, copy_list=[]):
             if not os.path.isdir(target_path):
                 logger.debug('Create target dir {} copy.'.format(target_path))
                 os.makedirs(target_path)
-            copy_dir(source_path, target_path, logger)
+            copy_dir(source_path, target_path)
     return copy_list
 
 
-def copy_package(source, target, local, logger):
+def copy_package(source, target):
     """
         Extract files to target path.
     """
-    suffix = get_suffix(source, logger)
+    suffix = get_suffix(source)
     base_name = os.path.basename(source)
-    package_file, name_list = read_tar(source, logger) if suffix == 'tar' else read_zip(source, logger)
+    package_file, name_list = read_tar(source) if suffix == 'tar' else read_zip(source)
     cover_list = []
     for name in name_list:
         # file_name = os.path.join(target, name) if suffix == 'tar' else os.path.join(target, name.encode('cp437').decode(locale.getpreferredencoding()))
@@ -185,4 +185,4 @@ def copy_package(source, target, local, logger):
 
 
 if __name__ == "__main__":
-    update_program(logger)
+    update_program()

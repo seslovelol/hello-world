@@ -18,21 +18,21 @@ from lib.common import check_arglen
 from lib.common import get_systeminfo
 
 
-def get_args(logger):
+def get_args():
     """
         Get args.
         Args: targetpath, sourcepath, excludepath.
     """
     exclude = ''
-    arg_len = check_arglen(2, 3, logger)
+    arg_len = check_arglen(2, 3)
     target, source = sys.argv[1:3]
     if arg_len == 3:
         exclude = sys.argv[3]
     logger.info('Begin to execute {} {} {} {} FTPINFO'.format(
         os.path.join(os.getcwd(), sys.argv[0]), target, source, exclude
     ))
-    create_path(target, logger)
-    check_path(source, logger)
+    create_path(target)
+    check_path(source)
     exclude = check_exclude(exclude, source)
     return source, target, exclude
 
@@ -46,34 +46,22 @@ def check_exclude(exclude_path, source_path):
     return exclude_list
 
 
-def filter_path(path):
-    """
-        Filter path's last '/' or '\'
-    """
-    if path.endswith(('\\', '/')):
-        path = path[:-1]
-        return filter_path(path)
-    else:
-        return path
-
-
-def backup_path(logger):
+def backup_path():
     """
         Backup a path to a package.
             Package type is zip if system is Windows.
             Package type is tar if system is Linux.
     """
-    logger = logger()
-    source, target, exclude = get_args(logger)
+    source, target, exclude = get_args()
     start_path = os.path.dirname(source)
-    base_name = os.path.basename(filter_path(source))
+    base_name = os.path.basename(source.rstrip('/').rstrip('\\'))
     target = os.path.join(target, 'backup')
-    create_path(target, logger)
-    platform = get_systeminfo(logger)
+    create_path(target)
+    platform = get_systeminfo()
     package_name = os.path.join(target, ''.join([base_name, '.bak', current_time, '.zip'])) if platform == 'Windows' \
         else os.path.join(target, ''.join([base_name, '.bak', current_time, '.tar']))
-    package_file = write_zip(package_name, logger) if platform == 'Windows' \
-        else write_tar(package_name, logger)
+    package_file = write_zip(package_name) if platform == 'Windows' \
+        else write_tar(package_name)
     # Get a 3-tuple of source path.
     for root, dirs, files in os.walk(source):
         # Remove exclude files or dirs from source path.
@@ -110,4 +98,4 @@ def backup_path(logger):
 
 
 if __name__ == "__main__":
-    backup_path(logger)
+    backup_path()

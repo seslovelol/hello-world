@@ -20,51 +20,50 @@ from lib.common import check_arglen
 from lib.common import ftp_download
 
 
-def get_args(logger):
+def get_args():
     """
         Get args.
         Args: packagename, localpath, short, code, ftpinfo.
     """
-    check_arglen(5, 5, logger)
+    check_arglen(5, 5)
     package, local, short, code, ftpinfo = sys.argv[1:]
     logger.info('Begin to execute {} {} {} {} FTPINFO'.format(
         os.path.join(os.getcwd(), sys.argv[0]), package, local, short, code
     ))
-    ftpinfo = check_ftp(ftpinfo, logger)
+    ftpinfo = check_ftp(ftpinfo)
     return package, local, short, code, ftpinfo
 
 
-def download_package(logger):
+def download_package():
     """
         Download a package and a file which record it's md5 code.
     """
-    logger = logger()
-    package, local, short, code, ftpinfo = get_args(logger)
+    package, local, short, code, ftpinfo = get_args()
     remote = os.path.join(ftpinfo[4], short, code).replace('\\', '/') + '/'
     local = os.path.join(local, code)
     logger.info('localPath = {}'.format(local))
     logger.info('remotePath = {}'.format(remote))
     logger.info('remoteFile = {}'.format(package))
     package_md5 = '.'.join([package, 'md5'])
-    check_path(local, logger)
+    check_path(local)
     package_result = False
     md5_result = False
     client = get_ftp(ftpinfo, logger, message=True)
-    remove_package(package, logger)
-    remove_package(package_md5, logger)
-    ftp_cwd(client, remote, logger)
-    package_result = ftp_download(client, package, logger)
-    md5_result = ftp_download(client, package_md5, logger)
+    remove_package(package)
+    remove_package(package_md5)
+    ftp_cwd(client, remote)
+    package_result = ftp_download(client, package)
+    md5_result = ftp_download(client, package_md5)
     client.quit()
     if package_result and md5_result:
-        check_md5(package, logger)
+        check_md5(package)
         sys.exit(0)
     else:
         logger.error('Failed to download package.')
         sys.exit(1)
 
 
-def remove_package(package, logger):
+def remove_package(package):
     """
         Clean up history packages.
     """
@@ -76,7 +75,7 @@ def remove_package(package, logger):
             logger.debug('Failed to remove history package {}'.format(package))
 
 
-def check_path(path, logger):
+def check_path(path):
     """
         Backup history packages.
     """
@@ -93,4 +92,4 @@ def check_path(path, logger):
 
 
 if __name__ == "__main__":
-    download_package(logger)
+    download_package()

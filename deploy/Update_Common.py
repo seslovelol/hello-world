@@ -26,52 +26,51 @@ from lib.common import check_package
 from lib.common import break_process
 
 
-def get_args(logger):
+def get_args():
     """
         Get args.
         Args: localpath, updatepath, packagename, module, env, ftpinfo
     """
-    check_arglen(6, 6, logger)
+    check_arglen(6, 6)
     local, update, package, module, env, ftpinfo = sys.argv[1:]
     logger.info('Begin to execute {} {} {} {} {} {} FTPINFO'.format(
         os.path.join(os.getcwd(), sys.argv[0]), local, update, package, module, env
     ))
-    check_path(local, logger)
-    check_package(local, package, logger)
-    check_module(local, package, module, logger)
-    create_path(update, logger)
-    ftpinfo = check_ftp(ftpinfo, logger)
+    check_path(local)
+    check_package(local, package)
+    check_module(local, package, module)
+    create_path(update)
+    ftpinfo = check_ftp(ftpinfo)
     return local, update, package, module, env, ftpinfo
 
 
-def update_common(logger):
+def update_common():
     """
         Update env directory from localpath to updatepath.
     """
-    logger = logger()
-    local, update, package, module, env, ftpinfo = get_args(logger)
+    local, update, package, module, env, ftpinfo = get_args()
     temp_path = '/'.join((local, 'log', module))
-    create_path(temp_path, logger)
-    handler, temp_log = file_logger(temp_path, logger)
+    create_path(temp_path)
+    handler, temp_log = file_logger(temp_path)
     # Module's real path.
     env_path = os.path.join(local, package.split('.')[0], module, env)
     if os.path.isdir(env_path):
-        result = copy_dir(env_path, update, logger)
+        result = copy_dir(env_path, update)
         logger.info('Copy files from {} to {} successfully.'.format(env, update))
-        get_stat(result, logger)
+        get_stat(result)
         logger.removeHandler(handler)
         add_bom(temp_log)
-        upload_log(package, module, ftpinfo, temp_log, logger)
-        exit_process(local, package, module, logger)
+        upload_log(package, module, ftpinfo, temp_log)
+        exit_process(local, package, module)
     else:
         logger.error('No such env dir {} in module {}'.format(env, module))
         logger.removeHandler(handler)
         add_bom(temp_log)
-        upload_log(package, module, ftpinfo, temp_log, logger)
-        break_process(local, package, module, logger)
+        upload_log(package, module, ftpinfo, temp_log)
+        break_process(local, package, module)
 
 
-def file_logger(path, logger):
+def file_logger(path):
     """
         Write messages to a log file.
     """
@@ -100,9 +99,9 @@ def copy_dir(source, target, logger, copy_list=[]):
             if not os.path.isdir(target_path):
                 logger.debug('Create target dir {} copy.'.format(target_path))
                 os.makedirs(target_path)
-            copy_dir(source_path, target_path, logger)
+            copy_dir(source_path, target_path)
     return copy_list
 
 
 if __name__ == "__main__":
-    update_common(logger)
+    update_common()

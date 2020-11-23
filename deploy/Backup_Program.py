@@ -27,47 +27,45 @@ from lib.common import check_package
 from lib.common import get_systeminfo
 
 
-def get_args(logger):
+def get_args():
     """
         Get arguments.
         Args: localpath, updatepath, package, module.
     """
-    check_arglen(5, 5, logger)
+    check_arglen(5, 5)
     local, update, backup, package, module = sys.argv[1:]
     logger.info('Begin to execute {} {} {} {} {} {}'.format(
-        os.path.join(os.getcwd(), sys.argv[0]), local, update, backup, package, module
-    ))
-    check_path(local, logger, chdir=True)
-    check_package(local, package, logger)
-    check_module(local, package, module, logger)
-    create_path(backup, logger)
-    check_path(update, logger)
-    order = check_order(local, package, module, logger)
+        os.path.join(os.getcwd(), sys.argv[0]), local, update, backup, package, module))
+    check_path(local, chdir=True)
+    check_package(local, package)
+    check_module(local, package, module)
+    create_path(backup)
+    check_path(update)
+    order = check_order(local, package, module)
     return local, update, backup, package, module, order
 
 
-def backup_program(logger):
+def backup_program():
     """
         Backup files of updatepath which will be update.
     """
-    logger = logger()
-    local, update, backup, package, module, order = get_args(logger)
+    local, update, backup, package, module, order = get_args()
     backup = os.path.join(backup, 'programbak')
     temp_path = os.path.join(local, 'log', module)
-    create_path(backup, logger)
-    create_path(temp_path, logger)
+    create_path(backup)
+    create_path(temp_path)
     # get content from order.txt
-    content = get_order(order, logger)
+    content = get_order(order)
     step_all = len(content)
     step_now = 1
     add_list = []
     # Module's real path.
     module_path = os.path.join(local, package.split('.')[0], module)
     config_file = os.path.join(temp_path, 'backup_program.ini')
-    remove_config(config_file, logger)
+    remove_config(config_file)
     for name in content:
         real_path = os.path.join(module_path, name)
-        package_suffix = '.zip' if get_systeminfo(logger) == 'windows' else '.tar'
+        package_suffix = '.zip' if get_systeminfo() == 'windows' else '.tar'
         target = os.path.join(backup, name + current_time + package_suffix)
         # script
         if name.lower().endswith(('.sh', '.py', '.bat')):
@@ -75,13 +73,16 @@ def backup_program(logger):
             step_now += 1
         # dir
         elif os.path.isdir(real_path):
-            temp = backup_dir(real_path, update, target, step_now, step_all, logger)
+            temp = backup_dir(real_path, update, target, step_now, step_all)
+            write_config(config_file, name, target)
         # package
         elif os.path.isfile(real_path) and name.lower().endswith(('.zip', '.tar')):
-            temp = backup_package(real_path, update, target, step_now, step_all, logger)
+            temp = backup_package(real_path, update, target, step_now, step_all)
+            write_config(config_file, name, target)
         # file
         elif os.path.isfile(real_path):
-            temp = backup_file(name, update, target, step_now, step_all, logger)
+            temp = backup_file(name, update, target, step_now, step_all)
+            write_config(config_file, name, target)
         else:
             logger.error('No such file or dir {} in {}'.format(name, local))
             sys.exit(1)
@@ -89,13 +90,13 @@ def backup_program(logger):
         step_now += 1
     logger.info('Program files have been backup successfully.')
     if add_list:
-        write_config(config_file, 'addFileList', '|'.join(add_list), logger, option='add program path list')
+        write_config(config_file, 'addFileList', '|'.join(add_list), option='add program path list')
         logger.info('Not backup file list:')
         for add_file in add_list: logger.info(add_file)
-    exit_process(local, package, module, logger)
+    exit_process(local, package, module)
 
 
-def backup_file(name, source, target, step, step_all, logger):
+def backup_file(name, source, target, step, step_all):
     """
         Backup a file of updatepath which also in localpath.
     """
@@ -103,10 +104,10 @@ def backup_file(name, source, target, step, step_all, logger):
     source_name = os.path.join(source, name)
     add_list = []
     if os.path.isfile(source_name):
-        package = write_zip(target, logger) if get_systeminfo(logger) == 'Windows' else write_tar(target, logger)
+        package = write_zip(target) if get_systeminfo() == 'Windows' else write_tar(target)
         try:
             logger.debug('Adding file {} to package {}'.format(source_name, target))
-            if get_systeminfo(logger) == 'Windows':
+            if get_systeminfo() == 'Windows':
                 package.write(source_name, arcname=name)
             else:
                 package.add(source_name, arcname=name)
@@ -136,7 +137,7 @@ def get_namelist(path, length, file_list=[]):
     return file_list
 
 
-def backup_dir(dir_path, source, target, step, step_all, logger):
+def backup_dir(dir_path, source, target, step, step_all):
     """
         Backup updatepath's files which also in the localpath's dir.
     """
@@ -146,13 +147,13 @@ def backup_dir(dir_path, source, target, step, step_all, logger):
     add_list = []
     count = 0
     logger.info('[ {}/{} ] {} backuping...'.format(step, step_all, basename))
-    package = write_zip(target, logger) if get_systeminfo(logger) == 'Windows' else write_tar(target, logger)
+    package = write_zip(target) if get_systeminfo() == 'Windows' else write_tar(target)
     for name in name_list:
         source_name = os.path.join(source, name)
-        if os.path.isfile(source_name):
+        if os.path.exists(source_name):
             try:
                 logger.debug('Adding file {} to package {}'.format(source_name, target))
-                if get_systeminfo(logger) == 'Windows':
+                if get_systeminfo() == 'Windows':
                     package.write(source_name, arcname=name)
                 else:
                     package.add(source_name, arcname=name)
@@ -169,22 +170,22 @@ def backup_dir(dir_path, source, target, step, step_all, logger):
     return add_list
 
 
-def backup_package(package_path, source, target, step, step_all, logger):
+def backup_package(package_path, source, target, step, step_all):
     """
         Backup updatepath's files which also in the localpath's package.
     """
     add_list = []
     count = 0
     logger.info('[ {}/{} ] {} backuping...'.format(step, step_all, os.path.basename(package_path)))
-    package = write_zip(target, logger) if get_systeminfo(logger) == 'Windows' else write_tar(target, logger)
-    suffix = get_suffix(package_path, logger)
-    local_package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
+    package = write_zip(target) if get_systeminfo() == 'Windows' else write_tar(target)
+    suffix = get_suffix(package_path)
+    local_package, name_list = read_tar(package_path) if suffix == 'tar' else read_zip(package_path)
     for name in name_list:
-        source_name = os.path.join(source, name.replace(r'\/'.replace(os.sep, ''), os.sep))
-        if os.path.isfile(source_name):
+        source_name = os.path.join(source, name.replace(r'\/'.replace(os.sep, ''), os.sep).strip('/'))
+        if os.path.exists(source_name):
             try:
                 logger.debug('Adding file {} to package {}'.format(source_name, target))
-                if get_systeminfo(logger) == 'Windows':
+                if get_systeminfo() == 'Windows':
                     package.write(source_name, arcname=name)
                 else:
                     package.add(source_name, arcname=name)
@@ -200,13 +201,13 @@ def backup_package(package_path, source, target, step, step_all, logger):
     return add_list
 
 
-def write_config(filepath, section, item, logger, option='backup program path'):
+def write_config(filepath, section, item, option='backup program path'):
     """
         Write backup files' path to a config file.
     """
     cf = configparser.ConfigParser()
     if os.path.isfile(filepath):
-        cf.read(section)
+        cf.read(filepath)
     if section in cf.sections():
         cf.set(section, option, item)
     else:
@@ -216,7 +217,7 @@ def write_config(filepath, section, item, logger, option='backup program path'):
         cf.write(f)
 
 
-def remove_config(filepath, logger):
+def remove_config(filepath):
     """
         Clean up config files.
     """
@@ -230,4 +231,4 @@ def remove_config(filepath, logger):
 
 
 if __name__ == "__main__":
-    backup_program(logger)
+    backup_program()

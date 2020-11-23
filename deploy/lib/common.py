@@ -26,12 +26,12 @@ import logging.handlers
 
 
 current_time = time.strftime('_%Y%m%d%H%M%S', time.localtime())
-python_version = (float(platform.python_version()[:3]), float(platform.python_version()[4:]))
+python_version = (float(sys.version[:3]), sys.version_info[2])
 template_name = 'template.properties'
 order_txt = 'order.txt'
 
 
-def logger():
+def get_logger():
     """
         Define 2 handlers:
             handler1 is used to show messages in console.
@@ -44,6 +44,7 @@ def logger():
     #                 filename = logFilename,
     #                 filemode = 'a')
     logger = logging.getLogger('logger')
+    if logger.handlers: return logger
     logger.setLevel(logging.DEBUG)
     console = logging.StreamHandler(stream=sys.stdout)
     console.setLevel(logging.INFO)
@@ -62,8 +63,23 @@ def logger():
     logger.addHandler(file_handler)
     return logger
 
+logger = get_logger()
 
-def check_arglen(min, max, logger):
+def file_logger(path, name):
+    """
+        Write messages to a log file.
+    """
+    log_name = time.strftime('%Y%m%d%H%M%S_{}.log'.format(name), time.localtime())
+    log_path = os.path.join(path, log_name)
+    handler = logging.FileHandler(log_path, encoding='utf-8')
+    formatter = logging.Formatter('%(asctime)s %(filename)s %(levelname)s : %(message)s')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    return handler, log_path
+
+
+def check_arglen(min, max):
     """
         Check argument count.
     """
@@ -78,7 +94,7 @@ def check_arglen(min, max, logger):
         return length
 
 
-def get_systeminfo(logger):
+def get_systeminfo():
     """
         Get system info.
         return: Windows | Linux | Others
@@ -92,7 +108,7 @@ def get_systeminfo(logger):
         return system_info
 
 
-def check_file(file_name, logger):
+def check_file(file_name):
     """
         Check file 3 times at most.
         Exit if it does not exists.
@@ -108,7 +124,7 @@ def check_file(file_name, logger):
         sys.exit(1)
 
 
-def change_path(path, logger):
+def change_path(path):
     """
         Change path.
         Exit if it is failed.
@@ -121,7 +137,7 @@ def change_path(path, logger):
         sys.exit(1)
 
 
-def check_path(path, logger, chdir=False):
+def check_path(path, chdir=False):
     """
         Check path 3 times at most.
         Change to the path if it exists.
@@ -132,7 +148,7 @@ def check_path(path, logger, chdir=False):
         if os.path.isdir(path):
             logger.debug('Find directory: {}'.format(path))
             if chdir:
-                change_path(path, logger)
+                change_path(path)
             result = False
             break
     if result:
@@ -140,7 +156,7 @@ def check_path(path, logger, chdir=False):
         sys.exit(1)
 
 
-def create_path(path, logger, chdir=False):
+def create_path(path, chdir=False):
     """
         Create a path if it does not exist.
         chdir = True: Change to the path.
@@ -153,10 +169,10 @@ def create_path(path, logger, chdir=False):
             logger.error('Create directory: {} failed.'.format(path))
             sys.exit(1)
     if chdir:
-        change_path(path, logger)
+        change_path(path)
 
 
-def remove_path(path, logger):
+def remove_path(path):
     """
         Remove path if it exists.
     """
@@ -168,7 +184,7 @@ def remove_path(path, logger):
         logger.debug('No such directory: {} to remove.'.format(path))
 
 
-def get_suffix(file_name, logger, package=True):
+def get_suffix(file_name, package=True):
     """
         Get suffix of a filename.
         Return: tar | zip | other
@@ -184,7 +200,7 @@ def get_suffix(file_name, logger, package=True):
         return file_suffix
 
 
-def read_tar(package_name, logger):
+def read_tar(package_name):
     """
         Open a tarfile for reading.
     """
@@ -201,7 +217,7 @@ def read_tar(package_name, logger):
         sys.exit(1)
 
 
-def read_zip(package_name, logger):
+def read_zip(package_name):
     """
         Open a zipfile for reading.
     """
@@ -218,7 +234,7 @@ def read_zip(package_name, logger):
         sys.exit(1)
 
 
-def write_tar(package_name, logger):
+def write_tar(package_name):
     """
         Open a tar file for writing.
     """
@@ -230,7 +246,7 @@ def write_tar(package_name, logger):
         sys.exit(1)
 
 
-def write_zip(package_name, logger):
+def write_zip(package_name):
     """
         Open a zip file for writing.
     """
@@ -242,13 +258,13 @@ def write_zip(package_name, logger):
         sys.exit(1)
 
 
-def get_namelist(local, package_name, logger):
+def get_namelist(local, package_name):
     """
         Get a package's namelist.
     """
-    suffix = get_suffix(package_name, logger)
+    suffix = get_suffix(package_name)
     package_path = os.path.join(local, package_name)
-    package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
+    package, name_list = read_tar(package_path) if suffix == 'tar' else read_zip(package_path)
     package.close()
     return name_list
 
@@ -270,7 +286,7 @@ def get_size(size, is_disk=True):
             size /= unit
 
 
-def get_stat(file_list, logger):
+def get_stat(file_list):
     """
         Get stat of a file.
     """
@@ -283,13 +299,13 @@ def get_stat(file_list, logger):
         file_list.clear()
 
 
-def check_md5(file_name, logger):
+def check_md5(file_name):
     """
         Check a file's md5.
     """
     local_md5 = get_md5(file_name)
     md5_file = '.'.join((file_name, 'md5'))
-    remote_md5 = read_file(md5_file, logger, exclude=True)[0]
+    remote_md5 = read_file(md5_file, exclude=True)[0]
     logger.info("Local file {}'s MD5 code: {}".format(file_name, local_md5))
     logger.info("Remote file {}'s value: {}".format(md5_file, remote_md5))
     if local_md5 == remote_md5:
@@ -313,7 +329,7 @@ def get_md5(file_name):
     return m.hexdigest()
 
 
-def read_file(file_name, logger, exclude=False):
+def read_file(file_name, exclude=False):
     """
         Read a file and return the file's content.
     """
@@ -339,15 +355,15 @@ def read_file(file_name, logger, exclude=False):
     return content
 
 
-def extract_package(local, package_name, module, logger):
+def extract_package(local, package_name, module):
     """
         Extract files from a package.
     """
-    suffix = get_suffix(package_name, logger)
+    suffix = get_suffix(package_name)
     package_path = os.path.join(local, package_name)
-    package, name_list = read_tar(package_path, logger) if suffix == 'tar' else read_zip(package_path, logger)
-    change_path(local, logger)
-    remove_path(os.path.join(local, module), logger)
+    package, name_list = read_tar(package_path) if suffix == 'tar' else read_zip(package_path)
+    change_path(local)
+    remove_path(os.path.join(local, module))
     if suffix == 'tar' or suffix == 'zip' and python_version[1] > 5:
         try:
             for name in name_list:
@@ -375,7 +391,7 @@ def extract_package(local, package_name, module, logger):
             sys.exit(1)
 
 
-def check_ipaddr(ipaddr, logger):
+def check_ipaddr(ipaddr):
     """
         Check the current device's ipaddr.
         Exit if it is not right.
@@ -388,7 +404,7 @@ def check_ipaddr(ipaddr, logger):
         sys.exit(1)
 
 
-def check_package(local, package, logger):
+def check_package(local, package):
     """
         Check package.
         Exit if it does not exist.
@@ -401,37 +417,37 @@ def check_package(local, package, logger):
         sys.exit(1)
 
 
-def check_module(local, package, module, logger, extract=True):
+def check_module(local, package, module, extract=True):
     """
         Check module from a package.
         Exit if it does not exist.
     """
-    name_list = get_namelist(local, package, logger)
+    name_list = get_namelist(local, package)
     temp = '/'.join((package.split('.')[0], module))
-    module_path = temp if get_suffix(package, logger) else temp + '/'
+    module_path = temp if get_suffix(package) else temp + '/'
     if module_path in name_list:
         logger.debug('Find module {} in package {}'.format(module, package))
     else:
         logger.error('No module {} in package {}. Check your package.'.format(module, package))
     if extract:
-        extract_package(local, package, module_path, logger)
+        extract_package(local, package, module_path)
 
 
-def remove_module(local, package, module, logger):
+def remove_module(local, package, module):
     """
         Clean up the module directory.
     """
     path = '/'.join((package.split('.')[0], module))
-    change_path(local, logger)
-    remove_path(path, logger)
+    change_path(local)
+    remove_path(path)
 
 
-def check_order(local, package, module, logger, extract=True):
+def check_order(local, package, module, extract=True):
     """
         Check order.txt from package/module.
         Extract it from package if it exists.
     """
-    name_list = get_namelist(local, package, logger)
+    name_list = get_namelist(local, package)
     order_path = '/'.join((package.split('.')[0], module, order_txt))
     if order_path in name_list:
         logger.debug('Find order.txt in package.')
@@ -439,24 +455,24 @@ def check_order(local, package, module, logger, extract=True):
         logger.error('No order.txt in package. Check your package.')
         sys.exit(1)
     if extract:
-        extract_package(local, package, order_path, logger)
+        extract_package(local, package, order_path)
     return os.path.join(local, order_path)
 
 
-def get_order(order, logger):
+def get_order(order):
     """
         Get content of `order.txt`.
     """
-    content = read_file(order, logger, exclude=True)
+    content = read_file(order, exclude=True)
     return content
 
 
-def check_template(local, package, logger, extract=True):
+def check_template(local, package, extract=True):
     """
         Check template from package.
         Extract it from package if it exists.
     """
-    name_list = get_namelist(local, package, logger)
+    name_list = get_namelist(local, package)
     template_path = '/'.join((package.split('.')[0], template_name))
     if template_path in name_list:
         logger.info('Find template file in package.')
@@ -464,17 +480,17 @@ def check_template(local, package, logger, extract=True):
         logger.error('No template file in package. Check your package.')
         sys.exit(1)
     if extract:
-        extract_package(local, package, template_path, logger)
+        extract_package(local, package, template_path)
     return os.path.join(local, template_path)
 
 
-def diff_file(file1, file2, output, logger):
+def diff_file(file1, file2, output):
     """
         Diff two files.
         Output: html.
     """
-    text1_lines = read_file(file1, logger)
-    text2_lines = read_file(file2, logger)
+    text1_lines = read_file(file1)
+    text2_lines = read_file(file2)
     diff = difflib.HtmlDiff()
     result = diff.make_file(text1_lines, text2_lines)
     with open(output, 'w') as file_writer:
@@ -482,7 +498,7 @@ def diff_file(file1, file2, output, logger):
     logger.debug('Diff files done.')
 
 
-def check_ftp(ftpinfo, logger):
+def check_ftp(ftpinfo):
     """
         Check ftp info.
     """
@@ -509,7 +525,7 @@ def ftp_connect(host, port):
     return client, result
 
 
-def get_ftp(ftpinfo, logger, message=False):
+def get_ftp(ftpinfo, message=False):
     """
         Login ftp with the ftp connection.
         Return a ftp client for downloading or uploading files.
@@ -540,7 +556,7 @@ def get_ftp(ftpinfo, logger, message=False):
     return client
 
 
-def ftp_cwd(client, remote, logger, mkdir=False):
+def ftp_cwd(client, remote, mkdir=False):
     """
         Change remote directory of ftp server.
     """
@@ -570,7 +586,7 @@ def ftp_cwd(client, remote, logger, mkdir=False):
             sys.exit(1)
 
 
-def ftp_upload(client, file_name, logger):
+def ftp_upload(client, file_name):
     """
         Upload a file to ftp server.
     """
@@ -593,7 +609,7 @@ def ftp_upload(client, file_name, logger):
     return result
 
 
-def ftp_download(client, remote_file, logger):
+def ftp_download(client, remote_file):
     """
         Download a file from ftp server.
     """
@@ -619,17 +635,17 @@ def ftp_download(client, remote_file, logger):
     return result
 
 
-def upload_log(package, module, ftpinfo, log_path, logger):
+def upload_log(package, module, ftpinfo, log_path):
     """
         Upload a log file and show link of the file.
     """
-    client = get_ftp(ftpinfo, logger)
+    client = get_ftp(ftpinfo)
     host = socket.gethostname()
     package_name = package.split('.')[0]
     remote_path = os.path.join(ftpinfo[4], 'log', package_name, module, host).replace('\\', '/')
     url = ''.join(('http://', ftpinfo[0]))
-    ftp_cwd(client, remote_path, logger, mkdir=True)
-    result = ftp_upload(client, log_path, logger)
+    ftp_cwd(client, remote_path, mkdir=True)
+    result = ftp_upload(client, log_path)
     client.quit()
     if result:
         link = '/'.join((url, remote_path, os.path.basename(log_path)))
@@ -682,7 +698,7 @@ def remove_bom(file_name):
     file_reader.close()
 
 
-def execute_script(path, logger):
+def execute_script(path):
     """
         Execute a script.
     """
@@ -690,22 +706,22 @@ def execute_script(path, logger):
     script_dir = os.path.dirname(path)
     if os.path.isdir(script_dir):
         os.chdir(script_dir)
-    suffix = get_suffix(script_base, logger, package=False)
+    suffix = get_suffix(script_base, package=False)
     if suffix == 'bat':
-        check_file(script_base, logger)
+        check_file(script_base)
         remove_bom(script_base)
         utf8_gbk(script_base)
-        returncode = sub_process(script_base, logger)
+        returncode = sub_process(script_base)
     elif suffix == 'sh':
-        check_file(script_base, logger)
+        check_file(script_base)
         script = ' '.join(('sh', script_base))
-        returncode = sub_process(script, logger)
+        returncode = sub_process(script)
     elif suffix == 'py':
-        check_file(script_base, logger)
+        check_file(script_base)
         script = ' '.join(('python', script_base))
-        returncode = sub_process(script, logger)
+        returncode = sub_process(script)
     else:
-        returncode = sub_process(script_base, logger)
+        returncode = sub_process(script_base)
     if returncode == 0:
         logger.info('{} has executed successfully.'.format(script_base))
     else:
@@ -713,7 +729,7 @@ def execute_script(path, logger):
         sys.exit(1)
 
 
-def stdout_process(process, logger):
+def stdout_process(process):
     """
         Show process' output.
     """
@@ -725,38 +741,38 @@ def stdout_process(process, logger):
             break
 
 
-def sub_process(command, logger):
+def sub_process(command):
     """
         Create a subprocess.
         Successfull: returncode = 0.
     """
     p = subprocess.Popen('{}'.format(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    t = threading.Thread(target=stdout_process, args=(p, logger))
+    t = threading.Thread(target=stdout_process, args=(p))
     t.start()
     p.wait()
     t.join()
     return p.returncode
 
 
-def break_process(local, package, module, logger, clean_up=True):
+def break_process(local, package, module, clean_up=True):
     """
         Clean up module directory and break process.
         Just exit process and do not remove module directory if clean_up is False.
         Set clean_up `False` if it is a database update.
     """
     if clean_up:
-        remove_module(local, package, module, logger)
+        remove_module(local, package, module)
     print(1)
     sys.exit(1)
 
 
-def exit_process(local, package, module, logger, clean_up=True):
+def exit_process(local, package, module, clean_up=True):
     """
         Clean up module directory and exit process.
         Just exit process and do not remove module directory if clean_up is False.
         Set clean_up `False` if it is a database update.
     """
     if clean_up:
-        remove_module(local, package, module, logger)
+        remove_module(local, package, module)
     print(0)
     sys.exit(0)
