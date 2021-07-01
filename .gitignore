@@ -1,3 +1,5 @@
 .svn
 .vscode
 .idea
+/Go/bin/*
+/Go/pkg/*
