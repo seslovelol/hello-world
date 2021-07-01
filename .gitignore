@@ -1,5 +1,6 @@
 .svn
 .vscode
 .idea
+.DS_Store
 /Go/bin/*
 /Go/pkg/*
