@@ -1,4 +1,4 @@
-package downloadpackage 
+package lib
 
 import "testing"
 
