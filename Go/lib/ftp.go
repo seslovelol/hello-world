@@ -10,46 +10,68 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-func FtpConnect(addr string) *ftp.ServerConn {
-	c, err := ftp.Dial(addr, ftp.DialWithTimeout(5*time.Second))
-	PrintError(err)
-	return c
+type ftpcon struct {
+	conn     *ftp.ServerConn
+	addr     string
+	username string
+	password string
 }
 
-func FtpLogin(c *ftp.ServerConn, user, password string) {
-	err := c.Login(user, password)
+// Connect connects to the specified address with optional options.
+func (f *ftpcon) Connect() {
+	var err error
+	var c *ftp.ServerConn
+	for i := 0; i < 3; i++ {
+		c, err = ftp.Dial(f.addr, ftp.DialWithTimeout(5*time.Second))
+		if err == nil {
+			PrintInfo("Connect to %v successfully", f.addr)
+			break
+		}
+		PrintInfo("%v Reconnect to %v", i, f.addr)
+	}
+	PrintError(err)
+	f.conn = c
+}
+
+// login authenticates the client with specified user and password.
+func (f *ftpcon) Login() {
+	err := f.conn.Login(f.username, f.password)
 	PrintError(err)
 }
 
-func FtpCurrentDir(c *ftp.ServerConn) string {
+// CurrentDir issues a PWD FTP command, which Returns the path of the current directory.
+func (f *ftpcon) CurrentDir() string {
 	var path string
-	path, err := c.CurrentDir()
+	path, err := f.conn.CurrentDir()
 	PrintError(err)
 	return path
 }
 
-func FtpChdir(c *ftp.ServerConn, path string) {
-	err := c.ChangeDir(path)
+// ChangeDir issues a CWD FTP command, which changes the current directory to the specified path.
+func (f *ftpcon) Chdir(path string) {
+	err := f.conn.ChangeDir(path)
 	PrintError(err)
 }
 
-func FtpMkdir(c *ftp.ServerConn, path string) {
+// MakeDir issues a MKD FTP command to create the specified directory on the remote FTP server.
+func (f *ftpcon) MakeDir(path string) {
 	for i, p := range strings.Split(path, "/") {
 		if i == 0 {
 			continue
 		}
-		err := c.ChangeDir(p)
+		err := f.conn.ChangeDir(p)
 		if err != nil {
-			err = c.MakeDir(p)
+			err = f.conn.MakeDir(p)
 			PrintError(err)
-			err = c.ChangeDir(p)
+			err = f.conn.ChangeDir(p)
 			PrintError(err)
 		}
 	}
 }
 
-func FtpDownload(c *ftp.ServerConn, filename string) {
-	rd, err := c.Retr(filename)
+// Download issues a RETR FTP command to fetch the specified file from the remote FTP server.
+func (f *ftpcon) Download(filename string) {
+	rd, err := f.conn.Retr(filename)
 	PrintError(err)
 	defer rd.Close()
 	wr, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0755)
@@ -59,16 +81,18 @@ func FtpDownload(c *ftp.ServerConn, filename string) {
 	PrintError(err)
 }
 
-func FtpUpload(c *ftp.ServerConn, filePath string) {
+// Upload issues a STOR FTP command to store a file to the remote FTP server. Stor creates the specified file with the content of the io.Reader.
+func (f *ftpcon) Upload(filePath string) {
 	filename := filepath.Base(filePath)
 	rd, err := os.Open(filePath)
 	PrintError(err)
 	defer rd.Close()
-	err = c.Stor(filename, rd)
+	err = f.conn.Stor(filename, rd)
 	PrintError(err)
 }
 
-func FtpQuit(c *ftp.ServerConn) {
-	err := c.Quit()
+// Quit issues a QUIT FTP command to properly close the connection from the remote FTP server.
+func (f *ftpcon) Quit() {
+	err := f.conn.Quit()
 	PrintError(err)
 }

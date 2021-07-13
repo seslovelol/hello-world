@@ -5,36 +5,82 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jlaffaye/ftp"
 )
 
 func TestFtpConnect(t *testing.T) {
-	addr := "rocky.com:21"
-	c := FtpConnect(addr)
-	FtpLogin(c, "ftp1", "fhd123")
-	FtpQuit(c)
+	var c *ftp.ServerConn
+	f := ftpcon{
+		conn:     c,
+		addr:     "rocky.com:21",
+		username: "ftp1",
+		password: "ftp123",
+	}
+	f.Connect()
+	f.Login()
+	f.Quit()
 }
 
 func TestFtpFtpUpload(t *testing.T) {
-	addr := "rocky.com:21"
-	c := FtpConnect(addr)
-	FtpLogin(c, "ftp1", "fhd123")
-	source := "/Users/shiqiankun/DEV/Go/source/aa.log"
-	dest := "a/b/c"
-	dest = strings.ReplaceAll(filepath.Join(FtpCurrentDir(c), dest), "\\", "/")
-	FtpMkdir(c, dest)
-	FtpUpload(c, source)
-	FtpQuit(c)
+	var sourcePath, destPath string
+	switch SystemType {
+	case "windows":
+		sourcePath = "D:\\opt\\source\\test.tar"
+		destPath = "a/b/c"
+	case "linux":
+		sourcePath = "/opt/source/test.tar"
+		destPath = "a/b/c"
+	case "darwin":
+		sourcePath = "/opt/source/test.tar"
+		destPath = "a/b/c"
+	default:
+		sourcePath = "/opt/source/test.tar"
+		destPath = "a/b/c"
+	}
+	var c *ftp.ServerConn
+	f := ftpcon{
+		conn:     c,
+		addr:     "rocky.com:21",
+		username: "ftp1",
+		password: "ftp123",
+	}
+	f.Connect()
+	f.Login()
+	destPath = strings.ReplaceAll(filepath.Join(f.CurrentDir(), destPath), "\\", "/")
+	f.MakeDir(destPath)
+	f.Upload(sourcePath)
+	f.Quit()
 }
 
 func TestFtpDownload(t *testing.T) {
-	addr := "rocky.com:21"
-	c := FtpConnect(addr)
-	FtpLogin(c, "ftp1", "fhd123")
-	source := "a/b/c"
-	dest := "/Users/shiqiankun/DEV/Go/dest"
-	err := os.Chdir(dest)
-	PrintError(err)
-	FtpChdir(c, strings.ReplaceAll(filepath.Join(FtpCurrentDir(c), source), "\\", "/"))
-	FtpDownload(c, "aa.log")
-	FtpQuit(c)
+	var sourcePath, destPath string
+	switch SystemType {
+	case "windows":
+		sourcePath = "a/b/c"
+		destPath = "/opt/dest/ftp"
+	case "linux":
+		sourcePath = "a/b/c"
+		destPath = "/opt/dest/ftp"
+	case "darwin":
+		sourcePath = "a/b/c"
+		destPath = "/opt/dest/ftp"
+	default:
+		sourcePath = "a/b/c"
+		destPath = "/opt/dest/ftp"
+	}
+	var c *ftp.ServerConn
+	f := ftpcon{
+		conn:     c,
+		addr:     "rocky.com:21",
+		username: "ftp1",
+		password: "ftp123",
+	}
+	f.Connect()
+	f.Login()
+	MakeDir(destPath, 0755)
+	os.Chdir(destPath)
+	f.Chdir(strings.ReplaceAll(filepath.Join(f.CurrentDir(), sourcePath), "\\", "/"))
+	f.Download("test.tar")
+	f.Quit()
 }
