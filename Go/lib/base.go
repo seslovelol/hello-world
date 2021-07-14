@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ var SystemType = runtime.GOOS
 
 // GetArg hold the command-line arguments, starting with the program name.
 func GetArg(min, max int) (int, []string) {
-	args := os.Args
+	args := os.Args[1:]
 	length := len(args)
 	if length < min {
 		ExitError("too few argument")
@@ -150,3 +151,43 @@ func getNext(pattern string) []int {
 	}
 	return next
 }
+
+func LocalTime() string {
+	localTime := time.Now().Local()
+	year := fmt.Sprintf("%4d", localTime.Year())
+	var month string
+	switch localTime.Month() {
+	case time.January:
+		month = "01"
+	case time.February:
+		month = "02"
+	case time.March:
+		month = "03"
+	case time.April:
+		month = "04"
+	case time.May:
+		month = "05"
+	case time.June:
+		month = "06"
+	case time.July:
+		month = "07"
+	case time.August:
+		month = "08"
+	case time.September:
+		month = "09"
+	case time.October:
+		month = "10"
+	case time.November:
+		month = "11"
+	case time.December:
+		month = "12"
+	}
+	day := fmt.Sprintf("%2d", localTime.Day())
+	hour := fmt.Sprintf("%2d", localTime.Hour())
+	minute := fmt.Sprintf("%2d", localTime.Minute())
+	second := fmt.Sprintf("%2d", localTime.Second())
+	now := strings.Join([]string{year, month, day, hour, minute, second}, "_")
+	return now
+}
+
+var Now = LocalTime()
