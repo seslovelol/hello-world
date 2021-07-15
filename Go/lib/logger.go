@@ -33,7 +33,7 @@ func Logger() *log.Logger {
 		os.Stdout,
 		file,
 	}
-	logger := log.New(io.MultiWriter(writers...), "", log.LstdFlags|log.Lshortfile)
+	logger := log.New(io.MultiWriter(writers...), "", log.LstdFlags)
 	return logger
 }
 

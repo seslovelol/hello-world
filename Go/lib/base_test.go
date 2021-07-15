@@ -113,3 +113,21 @@ func TestKMP(t *testing.T) {
 		t.Errorf("got %v\nwant %v", got, want)
 	}
 }
+
+func TestGetFileMd5(t *testing.T) {
+	var path string
+	switch SystemType {
+	case "windows":
+		path = "D:\\opt\\dest\\test.tar"
+	case "linux":
+		path = "/opt/dest/test.tar"
+	case "darwin":
+		path = "/opt/dest/test.tar"
+	default:
+		path = "/opt/dest/test.tar"
+	}
+	want := "88c601cf0fe072e795015430a5720ba3"
+	if got := GetFileMd5(path); want != got {
+		t.Errorf("got %v\nwant %v", got, want)
+	}
+}

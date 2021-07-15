@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -152,6 +154,7 @@ func getNext(pattern string) []int {
 	return next
 }
 
+// LocalTime returns local time now by farmate `2021_07_15_18_00_00`.
 func LocalTime() string {
 	localTime := time.Now().Local()
 	year := fmt.Sprintf("%4d", localTime.Year())
@@ -191,3 +194,15 @@ func LocalTime() string {
 }
 
 var Now = LocalTime()
+
+// GetFileMd5 returns a file's md5.
+func GetFileMd5(path string) string {
+	file, err := os.Open(path)
+	PrintError(err)
+	defer file.Close()
+	md5Handle := md5.New()
+	_, err = io.Copy(md5Handle, file)
+	PrintError(err)
+	md5 := md5Handle.Sum(nil)
+	return hex.EncodeToString(md5)
+}
